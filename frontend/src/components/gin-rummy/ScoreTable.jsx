@@ -1,8 +1,9 @@
 const HAND_LABELS = {
-  knock:    { label: 'Knock',    symbol: '✊' },
-  undercut: { label: 'Undercut', symbol: '⬇' },
-  gin:      { label: 'Gin',      symbol: '♠' },
-  big_gin:  { label: 'Big Gin',  symbol: '★' },
+  knock:    { label: 'Knock',      symbol: '✊' },
+  undercut: { label: 'Undercut',   symbol: '⬇' },
+  gin:      { label: 'Gin',        symbol: '♠' },
+  big_gin:  { label: 'Big Gin',    symbol: '★' },
+  imported: { label: 'Historical', symbol: '📜' },
 }
 
 export function ScoreTable({ game, hands }) {

@@ -18,9 +18,11 @@ export function GamesList({ games }) {
     <div className="space-y-2">
       {games.map(game => {
         const badge = STATUS_BADGE[game.status] || STATUS_BADGE.active
-        const date = new Date(game.started_at).toLocaleDateString(undefined, {
-          month: 'short', day: 'numeric', year: 'numeric',
-        })
+        const date = game.imported
+          ? 'Historical'
+          : new Date(game.started_at).toLocaleDateString(undefined, {
+              month: 'short', day: 'numeric', year: 'numeric',
+            })
 
         return (
           <Link

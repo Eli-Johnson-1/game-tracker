@@ -50,9 +50,11 @@ export function GinRummyGamePage() {
           {game.player2_username}
         </h2>
         <span className="text-xs" style={{ color: '#7ab893' }}>
-          {new Date(game.started_at).toLocaleDateString(undefined, {
-            month: 'short', day: 'numeric', year: 'numeric',
-          })}
+          {game.imported
+            ? 'Historical'
+            : new Date(game.started_at).toLocaleDateString(undefined, {
+                month: 'short', day: 'numeric', year: 'numeric',
+              })}
         </span>
       </div>
 
