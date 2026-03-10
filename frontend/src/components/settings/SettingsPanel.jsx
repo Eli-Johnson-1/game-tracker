@@ -4,7 +4,8 @@ import { updateSettings } from '../../api/settings'
 import { Button } from '../common/Button'
 import { ErrorMessage } from '../common/ErrorMessage'
 
-const SETTING_FIELDS = [
+// Numeric-only settings (no inline toggle)
+const NUMERIC_FIELDS = [
   {
     key: 'gin_rummy_win_threshold',
     label: 'Win Threshold',
@@ -29,30 +30,61 @@ const SETTING_FIELDS = [
     description: 'Bonus added to the deadwood difference when defender undercuts',
     unit: 'pts',
   },
+]
+
+// End-game bonus fields — each has an inline enabled toggle
+const BONUS_FIELDS = [
   {
     key: 'game_bonus',
+    enabledKey: 'game_bonus_enabled',
     label: 'Game Bonus',
     description: 'Points awarded to the winner at end-game',
     unit: 'pts',
   },
   {
     key: 'line_bonus',
+    enabledKey: 'line_bonus_enabled',
     label: 'Line / Box Bonus',
     description: 'Points per hand won, awarded to each player at end-game',
     unit: 'pts per hand',
   },
   {
     key: 'shutout_extra_game_bonus',
+    enabledKey: 'shutout_enabled',
     label: 'Shutout Bonus',
     description: 'Extra points to winner if the loser won zero hands',
     unit: 'pts',
   },
 ]
 
+function Toggle({ enabled, onToggle }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={onToggle}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        enabled ? 'bg-emerald-600' : 'bg-gray-600'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          enabled ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  )
+}
+
 export function SettingsPanel() {
   const { settings, refetch } = useContext(SettingsContext)
   const [form, setForm] = useState({})
-  const [shutoutEnabled, setShutoutEnabled] = useState(true)
+  const [toggles, setToggles] = useState({
+    game_bonus_enabled: true,
+    line_bonus_enabled: true,
+    shutout_enabled: true,
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -60,15 +92,23 @@ export function SettingsPanel() {
   useEffect(() => {
     if (!settings || Object.keys(settings).length === 0) return
     const initial = {}
-    for (const { key } of SETTING_FIELDS) {
+    for (const { key } of [...NUMERIC_FIELDS, ...BONUS_FIELDS]) {
       initial[key] = settings[key] ?? ''
     }
     setForm(initial)
-    setShutoutEnabled(settings.shutout_enabled ?? true)
+    setToggles({
+      game_bonus_enabled: settings.game_bonus_enabled ?? true,
+      line_bonus_enabled: settings.line_bonus_enabled ?? true,
+      shutout_enabled:    settings.shutout_enabled    ?? true,
+    })
   }, [settings])
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+  }
+
+  function handleToggle(key) {
+    setToggles(t => ({ ...t, [key]: !t[key] }))
   }
 
   async function handleSubmit(e) {
@@ -77,7 +117,7 @@ export function SettingsPanel() {
     setSaving(true)
     setSaved(false)
     try {
-      const payload = { ...form, shutout_enabled: shutoutEnabled }
+      const payload = { ...form, ...toggles }
       await updateSettings(payload)
       await refetch()
       setSaved(true)
@@ -94,14 +134,14 @@ export function SettingsPanel() {
       <div>
         <h2 className="text-lg font-semibold text-white mb-1">Gin Rummy Scoring</h2>
         <p className="text-sm text-gray-400">
-          These values apply to all new and in-progress games. Changes take effect immediately.
+          Changes apply to all games immediately, including completed games.
         </p>
       </div>
 
       <ErrorMessage message={error} />
 
       <div className="space-y-4">
-        {SETTING_FIELDS.map(({ key, label, description, unit }) => (
+        {NUMERIC_FIELDS.map(({ key, label, description, unit }) => (
           <div key={key} className="flex items-start gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-200 mb-0.5">{label}</label>
@@ -123,29 +163,35 @@ export function SettingsPanel() {
           </div>
         ))}
 
-        <div className="flex items-start gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-200 mb-0.5">Shutout Rule</label>
-            <p className="text-xs text-gray-500">
-              Apply shutout bonus when the loser wins zero hands
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={shutoutEnabled}
-              onClick={() => setShutoutEnabled(v => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                shutoutEnabled ? 'bg-emerald-600' : 'bg-gray-600'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  shutoutEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
+        <div className="border-t border-gray-700 pt-4">
+          <p className="text-xs text-gray-500 mb-3 uppercase tracking-wide">End-game bonuses</p>
+          <div className="space-y-4">
+            {BONUS_FIELDS.map(({ key, enabledKey, label, description, unit }) => (
+              <div key={key} className="flex items-start gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-200 mb-0.5">{label}</label>
+                  <p className="text-xs text-gray-500">{description}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="number"
+                    name={key}
+                    value={form[key] ?? ''}
+                    onChange={handleChange}
+                    min={0}
+                    max={500}
+                    required
+                    disabled={!toggles[enabledKey]}
+                    className="w-20 bg-gray-700 border border-gray-600 rounded-lg px-2 py-1.5 text-white text-sm text-right focus:outline-none focus:border-emerald-500 disabled:opacity-40"
+                  />
+                  <span className="text-xs text-gray-500 w-16">{unit}</span>
+                  <Toggle
+                    enabled={toggles[enabledKey]}
+                    onToggle={() => handleToggle(enabledKey)}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ function runMigrations() {
   const migrations = [
     require('./migrations/001_initial'),
     require('./migrations/002_settings'),
+    require('./migrations/003_bonus_toggles'),
   ]
 
   for (const migration of migrations) {

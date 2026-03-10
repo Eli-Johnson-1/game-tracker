@@ -1,16 +1,32 @@
-import { useParams, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useGinRummyGame } from '../hooks/useGinRummyGame'
+import { deleteGame } from '../api/ginRummy'
 import { GinRummyLayout } from '../components/gin-rummy/GinRummyLayout'
 import { ScoreTable } from '../components/gin-rummy/ScoreTable'
 import { HandEntryForm } from '../components/gin-rummy/HandEntryForm'
 import { EndGameSummary } from '../components/gin-rummy/EndGameSummary'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { Modal } from '../components/common/Modal'
 
 export function GinRummyGamePage() {
   const { id } = useParams()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const { game, hands, loading, error, endGame, onHandSubmitted } = useGinRummyGame(id)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDeleteConfirm() {
+    setDeleting(true)
+    try {
+      await deleteGame(id)
+      navigate('/gin-rummy')
+    } catch {
+      setDeleting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -49,13 +65,24 @@ export function GinRummyGamePage() {
           <span style={{ color: '#7ab893' }}>vs</span>{' '}
           {game.player2_username}
         </h2>
-        <span className="text-xs" style={{ color: '#7ab893' }}>
-          {game.imported
-            ? 'Historical'
-            : new Date(game.started_at).toLocaleDateString(undefined, {
-                month: 'short', day: 'numeric', year: 'numeric',
-              })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs" style={{ color: '#7ab893' }}>
+            {game.imported
+              ? 'Historical'
+              : new Date(game.started_at).toLocaleDateString(undefined, {
+                  month: 'short', day: 'numeric', year: 'numeric',
+                })}
+          </span>
+          {isParticipant && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-xs px-2 py-1 rounded border transition-colors"
+              style={{ color: '#f87171', borderColor: '#f87171' }}
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       {/* End-game summary (if complete) */}
@@ -83,6 +110,32 @@ export function GinRummyGamePage() {
           Game in progress — only participants can enter scores.
         </p>
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Game"
+      >
+        <p className="text-gray-300 mb-6">
+          Are you sure you want to delete this game? This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowDeleteModal(false)}
+            className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDeleteConfirm}
+            disabled={deleting}
+            className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </Modal>
     </GinRummyLayout>
   )
 }

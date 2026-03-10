@@ -85,15 +85,18 @@ function calculateEndGameScoring(game, hands, settings) {
   const loser_id  = winner_id === player1_id ? player2_id : player1_id
   const loserHandsWon = winner_id === player1_id ? p2HandsWon : p1HandsWon
 
-  const p1LineBonus = p1HandsWon * settings.line_bonus
-  const p2LineBonus = p2HandsWon * settings.line_bonus
+  const lineBonusEnabled  = settings.line_bonus_enabled  !== false
+  const gameBonusEnabled  = settings.game_bonus_enabled  !== false
+  const shutoutEnabled    = settings.shutout_enabled      !== false
 
-  let winnerGameBonus = settings.game_bonus
-  const is_shutout = settings.shutout_enabled && loserHandsWon === 0
+  const p1LineBonus = lineBonusEnabled ? p1HandsWon * settings.line_bonus : 0
+  const p2LineBonus = lineBonusEnabled ? p2HandsWon * settings.line_bonus : 0
 
-  if (is_shutout) {
-    winnerGameBonus += settings.shutout_extra_game_bonus
-  }
+  const is_shutout = loserHandsWon === 0
+
+  let winnerGameBonus = 0
+  if (gameBonusEnabled)              winnerGameBonus += settings.game_bonus
+  if (is_shutout && shutoutEnabled)  winnerGameBonus += settings.shutout_extra_game_bonus
 
   let player1_final_score = p1Running + p1LineBonus
   let player2_final_score = p2Running + p2LineBonus

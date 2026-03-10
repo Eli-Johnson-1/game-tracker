@@ -14,7 +14,7 @@ export function Navbar() {
     <nav className="bg-gray-900 border-b border-gray-800 px-4 py-3">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
         <Link to="/" className="text-white font-bold text-lg tracking-wide">
-          🎲 Game Tracker
+          Game Tracker
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-2">
@@ -47,7 +47,7 @@ export function Navbar() {
               }`
             }
           >
-            🪐 TM
+            TM
           </NavLink>
           <NavLink
             to="/settings"

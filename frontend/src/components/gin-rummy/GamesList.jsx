@@ -40,6 +40,11 @@ export function GamesList({ games }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {game.status === 'complete' && game.player1_final_score != null && (
+                <span className="text-xs font-medium hidden sm:block" style={{ color: '#7ab893' }}>
+                  {game.player1_final_score} – {game.player2_final_score}
+                </span>
+              )}
               {game.status === 'complete' && game.winner_username && (
                 <span className="text-xs text-white hidden sm:block">
                   🏆 {game.winner_username}

@@ -1,4 +1,5 @@
 const { getDb } = require('../db/database')
+const { recalculateCompletedGames } = require('../services/ginRummyRecalc')
 
 function getSettings(req, res, next) {
   try {
@@ -28,6 +29,7 @@ function updateSettings(req, res, next) {
     })
 
     updateMany(updates)
+    recalculateCompletedGames(db, getSettingsMap(db))
 
     const rows = db.prepare('SELECT key, value, description FROM settings ORDER BY key').all()
     const settings = Object.fromEntries(rows.map(r => [r.key, { value: r.value, description: r.description }]))

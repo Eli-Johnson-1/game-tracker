@@ -92,7 +92,13 @@ function getGame(req, res, next) {
       ORDER BY h.hand_number ASC
     `).all(req.params.id)
 
-    res.json({ game, hands })
+    let end_game = null
+    if (game.status === 'complete' && hands.length > 0) {
+      const settings = getSettingsMap(db)
+      end_game = calculateEndGameScoring(game, hands, settings)
+    }
+
+    res.json({ game, hands, end_game })
   } catch (err) { next(err) }
 }
 
@@ -218,7 +224,13 @@ function submitHand(req, res, next) {
     })
 
     const newHandId = doInsert()
-    const hand = db.prepare('SELECT * FROM gin_rummy_hands WHERE id = ?').get(newHandId)
+    const hand = db.prepare(`
+      SELECT h.*, w.username AS winner_username, kn.username AS knocker_username
+      FROM gin_rummy_hands h
+      JOIN users w ON w.id = h.winner_id
+      LEFT JOIN users kn ON kn.id = h.knocker_id
+      WHERE h.id = ?
+    `).get(newHandId)
 
     res.status(201).json({
       hand,
@@ -277,18 +289,34 @@ function getLeaderboard(req, res, next) {
       SELECT
         u.id,
         u.username,
-        COUNT(DISTINCT g.id) AS games_won,
-        SUM(CASE WHEN g.winner_id = u.id THEN g.player1_final_score
-                 WHEN g.winner_id != u.id AND (g.player1_id = u.id OR g.player2_id = u.id)
-                   THEN CASE WHEN g.player1_id = u.id THEN g.player1_final_score ELSE g.player2_final_score END
-                 ELSE 0 END) AS total_score,
         (SELECT COUNT(*) FROM gin_rummy_games
-         WHERE (player1_id = u.id OR player2_id = u.id) AND status = 'complete') AS games_played,
-        COUNT(DISTINCT CASE WHEN g.is_shutout = 1 THEN g.id END) AS shutouts
+         WHERE winner_id = u.id AND status = 'complete') AS games_won,
+        (SELECT COUNT(*) FROM gin_rummy_games
+         WHERE (player1_id = u.id OR player2_id = u.id)
+           AND status = 'complete' AND winner_id != u.id) AS games_lost,
+        (SELECT COUNT(*) FROM gin_rummy_hands h
+         JOIN gin_rummy_games g ON g.id = h.game_id
+         WHERE h.winner_id = u.id) AS hands_won,
+        (SELECT COUNT(*) FROM gin_rummy_hands h
+         JOIN gin_rummy_games g ON g.id = h.game_id
+         WHERE (g.player1_id = u.id OR g.player2_id = u.id)
+           AND h.winner_id != u.id AND h.winner_id IS NOT NULL) AS hands_lost,
+        (SELECT COALESCE(SUM(
+           CASE WHEN g.player1_id = u.id THEN g.player1_final_score
+                ELSE g.player2_final_score END), 0)
+         FROM gin_rummy_games g
+         WHERE (g.player1_id = u.id OR g.player2_id = u.id)
+           AND g.status = 'complete') AS points_for,
+        (SELECT COALESCE(SUM(
+           CASE WHEN g.player1_id = u.id THEN g.player2_final_score
+                ELSE g.player1_final_score END), 0)
+         FROM gin_rummy_games g
+         WHERE (g.player1_id = u.id OR g.player2_id = u.id)
+           AND g.status = 'complete') AS points_against,
+        (SELECT COUNT(*) FROM gin_rummy_games
+         WHERE winner_id = u.id AND status = 'complete' AND is_shutout = 1) AS shutouts
       FROM users u
-      LEFT JOIN gin_rummy_games g ON g.winner_id = u.id AND g.status = 'complete'
-      GROUP BY u.id
-      ORDER BY games_won DESC, total_score DESC
+      ORDER BY games_won DESC, points_for DESC
     `).all()
 
     res.json({ leaderboard: rows })

@@ -13,6 +13,7 @@ export function useGinRummyGame(gameId) {
       const { data } = await getGame(gameId)
       setGame(data.game)
       setHands(data.hands)
+      if (data.end_game) setEndGame(data.end_game)
     } catch {
       setError('Failed to load game')
     } finally {

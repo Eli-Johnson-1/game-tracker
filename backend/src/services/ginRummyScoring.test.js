@@ -7,7 +7,9 @@ const settings = {
   big_gin_bonus: 31,
   undercut_bonus: 10,
   game_bonus: 100,
+  game_bonus_enabled: true,
   line_bonus: 20,
+  line_bonus_enabled: true,
   shutout_extra_game_bonus: 100,
   shutout_enabled: true,
   gin_rummy_win_threshold: 100,
@@ -121,7 +123,7 @@ describe('calculateEndGameScoring', () => {
       makeHand(1, 110, 0),
     ]
     const result = calculateEndGameScoring(game, hands, noShutoutSettings)
-    assert.equal(result.is_shutout, false)
+    assert.equal(result.is_shutout, true)  // shutout occurred; bonus just not applied
     // p1: 110 + (1 × 20) + 100 game = 230 (no extra shutout bonus)
     assert.equal(result.player1_final_score, 230)
   })

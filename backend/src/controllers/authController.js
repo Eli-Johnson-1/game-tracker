@@ -9,7 +9,7 @@ async function register(req, res, next) {
     const db = getDb()
 
     const existing = db.prepare(
-      'SELECT id FROM users WHERE username = ? OR email = ?'
+      'SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR email = ?'
     ).get(username, email)
 
     if (existing) {
@@ -36,7 +36,7 @@ async function login(req, res, next) {
     const { username, password } = req.body
     const db = getDb()
 
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username)
+    const user = db.prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?)').get(username)
     if (!user) {
       return res.status(401).json({ error: 'Invalid username or password' })
     }

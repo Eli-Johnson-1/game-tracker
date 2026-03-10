@@ -8,6 +8,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { GinRummyPage } from './pages/GinRummyPage'
 import { GinRummyGamePage } from './pages/GinRummyGamePage'
+import { GinRummySettingsPage } from './pages/GinRummySettingsPage'
 import { TerraformingMarsPage } from './pages/TerraformingMarsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
@@ -29,6 +30,7 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="gin-rummy" element={<GinRummyPage />} />
               <Route path="gin-rummy/games/:id" element={<GinRummyGamePage />} />
+              <Route path="gin-rummy/settings" element={<GinRummySettingsPage />} />
               <Route path="terraforming-mars" element={<TerraformingMarsPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
