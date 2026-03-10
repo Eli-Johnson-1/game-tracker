@@ -8,18 +8,37 @@ import { AuthContext } from './authContext'
 export function AuthProvider({ children }) {
   const { instance, inProgress } = useMsal()
   const [user, setUser] = useState(null)
-  // Only start in loading state if there's a token to verify
-  const [loading, setLoading] = useState(() => !!localStorage.getItem('token'))
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) return
-    authApi.getMe()
-      .then(({ data }) => setUser(data.user))
-      .catch(() => localStorage.removeItem('token'))
-      .finally(() => setLoading(false))
-  }, [])
+    const accounts = instance.getAllAccounts()
 
+    if (token) {
+      authApi.getMe()
+        .then(({ data }) => setUser(data.user))
+        .catch(() => localStorage.removeItem('token'))
+        .finally(() => setLoading(false))
+      return
+    }
+
+    if (accounts.length > 0) {
+      // Redirect was processed before React mounted — recover via silent token acquisition
+      instance.acquireTokenSilent({ ...loginRequest, account: accounts[0] })
+        .then(async (response) => {
+          const { data } = await authApi.entraAuth(response.idToken)
+          localStorage.setItem('token', data.token)
+          setUser(data.user)
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false))
+      return
+    }
+
+    Promise.resolve().then(() => setLoading(false))
+  }, [instance])
+
+  // Keep event callback for future sign-ins (button clicks)
   useEffect(() => {
     const callbackId = instance.addEventCallback(async (event) => {
       if (event.eventType === EventType.LOGIN_SUCCESS && event.payload?.idToken) {
