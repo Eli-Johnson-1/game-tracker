@@ -23,6 +23,16 @@ npm run build     # Production build to dist/
 npm run lint      # ESLint
 ```
 
+### Import script (`backend/`)
+```bash
+# Dry run — prints what would be imported without writing anything
+node src/scripts/importGinHistory.js /path/to/gin.md --dry-run
+
+# Live import — players must already exist in the DB
+node src/scripts/importGinHistory.js /path/to/gin.md [--player1=Kylie] [--player2=Eli]
+```
+The script parses a markdown scoresheet (one table = one game, winner's column gets points) and bulk-inserts games with `imported=1`. Defaults to Kylie/Eli. Players must be registered first; run migrations before the first use.
+
 ### Docker (project root)
 ```bash
 docker compose up -d --build    # Build and start all services
@@ -67,8 +77,9 @@ Hand submission (`ginRummyController.submitHand`) runs the entire scoring pipeli
 
 **Gin Rummy UI components** (`components/gin-rummy/`):
 - `HandEntryForm` — three-tab form (Knock / Gin / Big Gin); calls `submitHand` and passes response to `onHandSubmitted` callback
-- `ScoreTable` — renders all hands with per-player running totals in the footer
+- `ScoreTable` — renders all hands with per-player running totals in the footer; handles `hand_type = 'imported'`
 - `EndGameSummary` — shown when `game.status === 'complete'`; displays breakdown from the end-game result
+- `GamesList` — shows "Historical" in place of a date when `game.imported === 1`
 
 ### Database Schema
 
@@ -78,6 +89,8 @@ Key relationships:
 - `gin_rummy_games.player1_id / player2_id / winner_id` → `users.id`
 - `gin_rummy_hands.game_id` → `gin_rummy_games.id` (CASCADE DELETE)
 - `gin_rummy_hands` stores `player1_running_total` and `player2_running_total` as denormalized cumulative totals to avoid recalculating on every read
+
+`gin_rummy_games.imported = 1` marks historically imported games (no real date; `hand_type = 'imported'` on all their hands). The `started_at` field is set to the import time and should be ignored in the UI when `imported = 1`.
 
 ### Adding a new game type
 
@@ -107,3 +120,17 @@ Default values (all configurable in Settings page):
 | `gin_rummy_win_threshold` | 100 | Running score that triggers end-game |
 
 Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
+
+## Phase Status
+
+| Phase | Status | Notes |
+|---|---|---|
+| 1 | ✅ Complete | Project bootstrap, Docker, repo |
+| 2 | ✅ Complete | DB migrations, auth backend |
+| 3 | ✅ Complete | Auth frontend, ProtectedRoute, Layout |
+| 4 | ✅ Complete | Settings backend + frontend |
+| 5 | ✅ Complete | Gin Rummy backend + scoring service (16 unit tests) |
+| 6 | ✅ Complete | Gin Rummy frontend (HandEntryForm, ScoreTable, EndGameSummary) |
+| 7 | ✅ Complete | Dashboard, site leaderboard, Terraforming Mars placeholder |
+| 8 | ✅ Complete | Historical import script; 40 games / 250 hands loaded |
+| 9 | Pending | Homelab deployment (Proxmox LXC, Docker Compose, NPM, Pi-hole, PBS) |
