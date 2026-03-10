@@ -6,6 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Family board game score tracker. Currently supports Gin Rummy (full scoring) and Terraforming Mars (placeholder). Hosted at `gametracker.chuplab.com` via NPM on the homelab Proxmox server.
 
+## Git Workflow
+
+This project uses **GitHub Flow**: feature branches → PR → merge to `main`.
+
+### Rules (enforced on `main`)
+- **Never push directly to `main`** — all changes go through a PR
+- **Never force push** — `main` has force push disabled
+- **Never delete `main`**
+- All work happens on a feature branch: `phase/N-description` for phases, `fix/description` for bugfixes, `feature/description` for standalone features
+
+### Process
+1. Branch from `main`: `git checkout -b phase/10-deployment`
+2. Commit work on the feature branch
+3. Push and open a PR: `gh pr create`
+4. Merge via PR (squash or merge commit — be consistent)
+5. Delete the feature branch after merge
+6. Pull `main` locally: `git checkout main && git pull`
+
+### Before opening a PR
+- Run `npm run test` in `backend/` — all tests must pass
+- Run `npm run lint` in `frontend/` — no lint errors
+
 ## Commands
 
 ### Backend (`backend/`)
