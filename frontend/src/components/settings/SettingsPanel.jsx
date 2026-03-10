@@ -1,5 +1,5 @@
-import { useState, useContext, useEffect } from 'react'
-import { SettingsContext } from '../../contexts/SettingsContext'
+import { useState, useEffect } from 'react'
+import { useSettings } from '../../hooks/useSettings'
 import { updateSettings } from '../../api/settings'
 import { Button } from '../common/Button'
 import { ErrorMessage } from '../common/ErrorMessage'
@@ -78,7 +78,7 @@ function Toggle({ enabled, onToggle }) {
 }
 
 export function SettingsPanel() {
-  const { settings, refetch } = useContext(SettingsContext)
+  const { settings, refetch } = useSettings()
   const [form, setForm] = useState({})
   const [toggles, setToggles] = useState({
     game_bonus_enabled: true,
