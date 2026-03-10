@@ -1,55 +1,82 @@
-const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+const jwksClient = require('jwks-rsa')
 const { getDb } = require('../db/database')
 const { signToken } = require('../utils/jwt')
-const { ValidationError } = require('../utils/errors')
 
-async function register(req, res, next) {
-  try {
-    const { username, email, password } = req.body
-    const db = getDb()
+const TENANT_ID = process.env.ENTRA_TENANT_ID
+const CLIENT_ID = process.env.ENTRA_CLIENT_ID
 
-    const existing = db.prepare(
-      'SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR email = ?'
-    ).get(username, email)
+const client = jwksClient({
+  jwksUri: `https://login.microsoftonline.com/${TENANT_ID}/discovery/v2.0/keys`,
+  cache: true,
+  rateLimit: true,
+})
 
-    if (existing) {
-      return next(new ValidationError('Username or email already in use'))
-    }
-
-    const hash = await bcrypt.hash(password, 12)
-    const result = db.prepare(
-      'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)'
-    ).run(username, email, hash)
-
-    const user = db.prepare('SELECT id, username, email, created_at FROM users WHERE id = ?')
-      .get(result.lastInsertRowid)
-
-    const token = signToken({ id: user.id, username: user.username })
-    res.status(201).json({ token, user })
-  } catch (err) {
-    next(err)
-  }
+function getSigningKey(header, callback) {
+  client.getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err)
+    callback(null, key.getPublicKey())
+  })
 }
 
-async function login(req, res, next) {
+async function entraAuth(req, res, next) {
   try {
-    const { username, password } = req.body
-    const db = getDb()
-
-    const user = db.prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?)').get(username)
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid username or password' })
+    const { idToken } = req.body
+    if (!idToken) {
+      return res.status(400).json({ error: 'idToken is required' })
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash)
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid username or password' })
+    // Verify the Microsoft-issued ID token
+    const claims = await new Promise((resolve, reject) => {
+      jwt.verify(
+        idToken,
+        getSigningKey,
+        {
+          audience: CLIENT_ID,
+          issuer: [
+            `https://login.microsoftonline.com/${TENANT_ID}/v2.0`,
+            `https://sts.windows.net/${TENANT_ID}/`,
+          ],
+          algorithms: ['RS256'],
+        },
+        (err, decoded) => {
+          if (err) reject(err)
+          else resolve(decoded)
+        }
+      )
+    })
+
+    const oid = claims.oid
+    const email = (claims.preferred_username || claims.email || '').toLowerCase()
+    const name = claims.name || email.split('@')[0]
+
+    const db = getDb()
+
+    // 1. Find by entra_oid
+    let user = db.prepare('SELECT id, username, email FROM users WHERE entra_oid = ?').get(oid)
+
+    if (!user && email) {
+      // 2. Find by email — link existing account (Kylie/Eli migration path)
+      user = db.prepare('SELECT id, username, email FROM users WHERE LOWER(email) = ?').get(email)
+      if (user) {
+        db.prepare('UPDATE users SET entra_oid = ? WHERE id = ?').run(oid, user.id)
+      }
+    }
+
+    if (!user) {
+      // 3. Auto-provision new user
+      const result = db.prepare(
+        'INSERT INTO users (username, email, entra_oid) VALUES (?, ?, ?)'
+      ).run(name, email, oid)
+      user = db.prepare('SELECT id, username, email FROM users WHERE id = ?').get(result.lastInsertRowid)
     }
 
     const token = signToken({ id: user.id, username: user.username })
-    const { password_hash, ...safeUser } = user
-    res.json({ token, user: safeUser })
+    res.json({ token, user })
   } catch (err) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid or expired Microsoft token' })
+    }
     next(err)
   }
 }
@@ -66,4 +93,4 @@ function me(req, res, next) {
   }
 }
 
-module.exports = { register, login, me }
+module.exports = { entraAuth, me }

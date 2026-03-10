@@ -34,6 +34,7 @@ function runMigrations() {
     require('./migrations/001_initial'),
     require('./migrations/002_settings'),
     require('./migrations/003_bonus_toggles'),
+    require('./migrations/004_entra_auth'),
   ]
 
   for (const migration of migrations) {

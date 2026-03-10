@@ -1,45 +1,58 @@
-import { createContext, useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useMsal } from '@azure/msal-react'
+import { EventType, InteractionStatus } from '@azure/msal-browser'
+import { loginRequest } from '../auth/msalConfig'
 import * as authApi from '../api/auth'
-
-export const AuthContext = createContext(null)
+import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
+  const { instance, inProgress } = useMsal()
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Only start in loading state if there's a token to verify
+  const [loading, setLoading] = useState(() => !!localStorage.getItem('token'))
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) {
-      setLoading(false)
-      return
-    }
+    if (!token) return
     authApi.getMe()
       .then(({ data }) => setUser(data.user))
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (username, password) => {
-    const { data } = await authApi.login({ username, password })
-    localStorage.setItem('token', data.token)
-    setUser(data.user)
-    return data.user
-  }, [])
+  useEffect(() => {
+    const callbackId = instance.addEventCallback(async (event) => {
+      if (event.eventType === EventType.LOGIN_SUCCESS && event.payload?.idToken) {
+        try {
+          const { data } = await authApi.entraAuth(event.payload.idToken)
+          localStorage.setItem('token', data.token)
+          setUser(data.user)
+        } catch (err) {
+          console.error('Backend token exchange failed:', err)
+        }
+      }
+    })
+    return () => instance.removeEventCallback(callbackId)
+  }, [instance])
 
-  const register = useCallback(async (username, email, password) => {
-    const { data } = await authApi.register({ username, email, password })
-    localStorage.setItem('token', data.token)
-    setUser(data.user)
-    return data.user
-  }, [])
+  const signIn = useCallback(() => {
+    instance.loginRedirect(loginRequest)
+  }, [instance])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     localStorage.removeItem('token')
     setUser(null)
-  }, [])
+    try {
+      await instance.logoutRedirect()
+    } catch {
+      // Ignore errors
+    }
+  }, [instance])
+
+  const isLoading = loading || inProgress === InteractionStatus.HandleRedirect
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading: isLoading, signIn, logout }}>
       {children}
     </AuthContext.Provider>
   )

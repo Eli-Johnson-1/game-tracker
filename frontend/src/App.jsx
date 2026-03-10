@@ -4,7 +4,6 @@ import { SettingsProvider } from './contexts/SettingsContext'
 import { ProtectedRoute } from './components/common/ProtectedRoute'
 import { Layout } from './components/common/Layout'
 import { LoginPage } from './pages/LoginPage'
-import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { GinRummyPage } from './pages/GinRummyPage'
 import { GinRummyGamePage } from './pages/GinRummyGamePage'
@@ -19,7 +18,6 @@ export default function App() {
         <SettingsProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
             <Route
               element={
                 <ProtectedRoute>
