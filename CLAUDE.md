@@ -103,7 +103,7 @@ Key relationships:
 
 ### Deployment
 
-Docker Compose on a Proxmox LXC. No ports are exposed to the host — NPM (192.168.20.5) handles TLS termination and proxies to the frontend container, which in turn proxies `/api/*` to the backend container via nginx. The SQLite database lives in the `sqlite-data` named volume at `/app/data/gametracker.db` inside the backend container.
+Docker Compose on a Proxmox LXC. The frontend container publishes port 80 to the LXC host; NPM (192.168.20.5) handles TLS termination and proxies to the LXC on port 80. The frontend nginx then proxies `/api/*` to the backend container internally. The backend is not exposed to the host. The SQLite database lives in the `sqlite-data` named volume at `/app/data/gametracker.db` inside the backend container.
 
 ## Gin Rummy Scoring Reference
 
