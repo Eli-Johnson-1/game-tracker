@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-felt-green: #35654d;
+  --color-felt-dark: #1e3d2f;
+  --color-felt-light: #4a7c5f;
+  --color-card-cream: #f5f0e8;
+  --color-mars-rust: #c1440e;
+  --color-mars-dark: #1a0a00;
+  --color-mars-red: #8b1a1a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

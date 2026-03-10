@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: ./backend
+    container_name: gametracker-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3000
+    volumes:
+      - sqlite-data:/app/data
+    networks:
+      - internal
+
+  frontend:
+    build: ./frontend
+    container_name: gametracker-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  sqlite-data:

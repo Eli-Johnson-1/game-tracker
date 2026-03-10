@@ -1,0 +1,17 @@
+{
+  "allowedTools": [
+    "Bash(npm *)",
+    "Bash(node *)",
+    "Bash(git *)",
+    "Bash(gh *)",
+    "Bash(docker *)",
+    "Bash(mkdir *)",
+    "Bash(ls *)",
+    "Bash(ls)",
+    "Bash(cd *)",
+    "Bash(cp *)",
+    "Bash(mv *)",
+    "WebSearch",
+    "WebFetch"
+  ]
+}
