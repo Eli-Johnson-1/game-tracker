@@ -3,7 +3,7 @@ import { useMsal } from '@azure/msal-react'
 import { EventType, InteractionStatus } from '@azure/msal-browser'
 import { loginRequest } from '../auth/msalConfig'
 import * as authApi from '../api/auth'
-import { AuthContext } from './authContext'
+import { AuthContext } from './authContextDef'
 
 export function AuthProvider({ children }) {
   const { instance, inProgress } = useMsal()

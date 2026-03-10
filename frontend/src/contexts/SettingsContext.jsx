@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { getSettings } from '../api/settings'
-import { SettingsContext } from './settingsContext'
+import { SettingsContext } from './settingsContextDef'
 
 function parseSettings(data) {
   const parsed = {}
