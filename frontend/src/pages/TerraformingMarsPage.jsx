@@ -1,21 +1,51 @@
+import { useState, useEffect } from 'react'
+import { TerraformingMarsLayout } from '../components/terraforming-mars/TerraformingMarsLayout'
+import { TmLeaderboard } from '../components/terraforming-mars/TmLeaderboard'
+import { TmGamesList } from '../components/terraforming-mars/TmGamesList'
+import { NewTmGameModal } from '../components/terraforming-mars/NewTmGameModal'
+import { Button } from '../components/common/Button'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { listGames } from '../api/terraformingMars'
+
 export function TerraformingMarsPage() {
+  const [games, setGames] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showNew, setShowNew] = useState(false)
+
+  useEffect(() => {
+    listGames()
+      .then(({ data }) => setGames(data.games))
+      .finally(() => setLoading(false))
+  }, [])
+
+  function onGameCreated(game) {
+    setGames(prev => [game, ...prev])
+  }
+
   return (
-    <div
-      className="min-h-[60vh] rounded-2xl flex flex-col items-center justify-center text-center p-8"
-      style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #3d1a00 50%, #1a0a00 100%)' }}
-    >
-      <div className="text-8xl mb-6">🪐</div>
-      <h1 className="text-3xl font-bold mb-3" style={{ color: '#e8824a' }}>
-        Terraforming Mars
-      </h1>
-      <p className="text-orange-200/70 max-w-md text-sm leading-relaxed">
-        Score tracking for Terraforming Mars is coming soon. For now, keep playing
-        and we'll build the scoreboard when you're ready.
-      </p>
-      <div className="mt-8 flex gap-2 text-orange-900/50 text-xs">
-        <span>TR</span><span>·</span><span>Milestones</span><span>·</span>
-        <span>Awards</span><span>·</span><span>Greenery</span><span>·</span><span>Cities</span>
+    <TerraformingMarsLayout>
+      <TmLeaderboard />
+
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#f97316' }}>
+          Games
+        </h2>
+        <Button size="sm" onClick={() => setShowNew(true)}>
+          + New game
+        </Button>
       </div>
-    </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8"><LoadingSpinner /></div>
+      ) : (
+        <TmGamesList games={games} />
+      )}
+
+      <NewTmGameModal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={onGameCreated}
+      />
+    </TerraformingMarsLayout>
   )
 }

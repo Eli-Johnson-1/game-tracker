@@ -1,0 +1,50 @@
+import { useState } from 'react'
+import { evaluate } from 'mathjs'
+
+const ALLOWED = /^[\d\s+\-*/().]*$/
+
+function safePreview(expr) {
+  if (!expr || expr.trim() === '') return null
+  if (!ALLOWED.test(expr)) return null
+  try {
+    const result = evaluate(expr)
+    if (typeof result === 'number' && isFinite(result)) {
+      return Math.round(result)
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+export function CardVpInput({ value, onChange }) {
+  const [raw, setRaw] = useState(value?.expression ?? '')
+
+  function handleChange(e) {
+    const text = e.target.value
+    // Allow only valid characters
+    if (!ALLOWED.test(text)) return
+    setRaw(text)
+    const preview = safePreview(text)
+    onChange({ expression: text, value: preview ?? 0 })
+  }
+
+  const preview = safePreview(raw)
+  const isInvalid = raw.trim() !== '' && preview === null
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        value={raw}
+        onChange={handleChange}
+        placeholder="e.g. 13+2+5"
+        className="w-full rounded px-2 py-1 text-sm bg-gray-700 border text-white placeholder-gray-500 focus:outline-none focus:ring-1"
+        style={{ borderColor: isInvalid ? '#f87171' : '#4b5563', focusRingColor: '#ea580c' }}
+      />
+      <span className="text-xs whitespace-nowrap" style={{ color: isInvalid ? '#f87171' : '#9ca3af', minWidth: 40 }}>
+        {raw.trim() === '' ? '= 0' : isInvalid ? 'invalid' : `= ${preview}`}
+      </span>
+    </div>
+  )
+}
