@@ -2,6 +2,9 @@ import { useState, useRef } from 'react'
 import { CardVpInput } from './CardVpInput'
 import { analyzePhoto, completeGame, updateGame } from '../../api/terraformingMars'
 
+// Feature flag — set to true to re-enable photo analysis
+const PHOTO_ANALYSIS_ENABLED = false
+
 const MILESTONE_NAMES = ['Terraformer', 'Mayor', 'Gardener', 'Builder', 'Planner']
 const AWARD_NAMES = ['Landlord', 'Banker', 'Scientist', 'Thermalist', 'Miner']
 
@@ -81,6 +84,9 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   const [photoAnalyzing, setPhotoAnalyzing] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const [photoNotes, setPhotoNotes] = useState('')
+  const [fromPhotoGeneration, setFromPhotoGeneration] = useState(false)
+  const [fromPhotoMilestones, setFromPhotoMilestones] = useState(false)
+  const [fromPhotoAwards, setFromPhotoAwards] = useState(false)
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef()
 
@@ -112,6 +118,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   }
 
   function toggleMilestone(name, checked) {
+    setFromPhotoMilestones(false)
     setMilestones(prev => {
       if (!checked) {
         const next = { ...prev }
@@ -128,6 +135,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   }
 
   function toggleAward(name, checked) {
+    setFromPhotoAwards(false)
     setAwards(prev => {
       if (!checked) {
         const next = { ...prev }
@@ -144,6 +152,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   }
 
   function toggleAwardPlace(awardName, playerId, place) {
+    setFromPhotoAwards(false)
     setAwards(prev => {
       const current = prev[awardName] || { firstPlace: [], secondPlace: [] }
       const key = place === 1 ? 'firstPlace' : 'secondPlace'
@@ -163,9 +172,13 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
     try {
       const formData = new FormData()
       formData.append('image', photoFile)
+      formData.append('playerColors', JSON.stringify(game.players.map(p => p.color)))
       const { data } = await analyzePhoto(formData)
 
-      if (data.generation) setGeneration(data.generation)
+      if (data.generation != null) {
+        setGeneration(data.generation)
+        setFromPhotoGeneration(true)
+      }
 
       for (const pp of data.players || []) {
         const gamePlayer = game.players.find(p => p.color === pp.color)
@@ -176,6 +189,43 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
           city_adjacent_greeneries: pp.city_adjacent_greeneries ?? 0,
           fromPhoto: { tr: true, greeneries: true, city_adjacent_greeneries: true },
         })
+      }
+
+      // Pre-fill milestones from photo
+      if (data.milestones_claimed?.length) {
+        const newMilestones = {}
+        for (const m of data.milestones_claimed) {
+          const gamePlayer = game.players.find(p => p.color === m.color)
+          if (gamePlayer && MILESTONE_NAMES.includes(m.name)) {
+            newMilestones[m.name] = gamePlayer.id
+          }
+        }
+        if (Object.keys(newMilestones).length) {
+          setMilestones(newMilestones)
+          setFromPhotoMilestones(true)
+        }
+      }
+
+      // Pre-fill awards from photo
+      if (data.awards_funded?.length) {
+        const newAwards = {}
+        for (const a of data.awards_funded) {
+          if (!AWARD_NAMES.includes(a.name)) continue
+          newAwards[a.name] = { firstPlace: [], secondPlace: [] }
+        }
+        if (data.landlord_ranks && newAwards['Landlord']) {
+          const toIds = colors => (colors || [])
+            .map(c => game.players.find(p => p.color === c)?.id)
+            .filter(Boolean)
+          newAwards['Landlord'] = {
+            firstPlace: toIds(data.landlord_ranks.first),
+            secondPlace: toIds(data.landlord_ranks.second),
+          }
+        }
+        if (Object.keys(newAwards).length) {
+          setAwards(newAwards)
+          setFromPhotoAwards(true)
+        }
       }
 
       if (data.notes) setPhotoNotes(data.notes)
@@ -260,65 +310,75 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
       {/* Photo tab */}
       {tab === 'photo' && (
         <div className="space-y-4">
-          {photoError && (
-            <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: '#450a0a', color: '#fca5a5' }}>
-              {photoError}
+          {!PHOTO_ANALYSIS_ENABLED ? (
+            <div className="rounded-xl p-8 text-center" style={{ backgroundColor: '#1a0a00', border: '1px solid #7c2d12' }}>
+              <div className="text-4xl mb-3">📷</div>
+              <p className="text-sm font-semibold text-orange-300 mb-1">Photo analysis temporarily unavailable</p>
+              <p className="text-xs text-gray-400">Enter scores manually using the Manual tab.</p>
             </div>
-          )}
-          <div
-            className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
-            style={{
-              borderColor: dragging ? '#ea580c' : photoFile ? '#c2410c' : '#7c2d12',
-              backgroundColor: dragging ? '#2d1500' : 'transparent',
-            }}
-            onClick={() => fileRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={e => {
-              e.preventDefault()
-              setDragging(false)
-              handleFilePick(e.dataTransfer.files?.[0])
-            }}
-          >
-            <div className="text-4xl mb-2">📷</div>
-            {photoFile ? (
-              <div className="flex items-center justify-center gap-2">
-                <p className="text-sm text-orange-300 truncate max-w-xs">{photoFile.name}</p>
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); clearPhotoFile() }}
-                  className="text-gray-400 hover:text-white transition-colors text-lg leading-none flex-shrink-0"
-                  title="Remove file"
-                >
-                  ×
-                </button>
+          ) : (
+            <>
+              {photoError && (
+                <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: '#450a0a', color: '#fca5a5' }}>
+                  {photoError}
+                </div>
+              )}
+              <div
+                className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
+                style={{
+                  borderColor: dragging ? '#ea580c' : photoFile ? '#c2410c' : '#7c2d12',
+                  backgroundColor: dragging ? '#2d1500' : 'transparent',
+                }}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={e => {
+                  e.preventDefault()
+                  setDragging(false)
+                  handleFilePick(e.dataTransfer.files?.[0])
+                }}
+              >
+                <div className="text-4xl mb-2">📷</div>
+                {photoFile ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-sm text-orange-300 truncate max-w-xs">{photoFile.name}</p>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); clearPhotoFile() }}
+                      className="text-gray-400 hover:text-white transition-colors text-lg leading-none flex-shrink-0"
+                      title="Remove file"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-300">
+                    {dragging ? 'Drop it!' : 'Drop a photo here, or click to browse'}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG, etc. — max 10 MB</p>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => handleFilePick(e.target.files?.[0])}
+                />
               </div>
-            ) : (
-              <p className="text-sm text-gray-300">
-                {dragging ? 'Drop it!' : 'Drop a photo here, or click to browse'}
-              </p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">JPG, PNG, etc. — max 10 MB</p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={e => handleFilePick(e.target.files?.[0])}
-            />
-          </div>
-          <button
-            onClick={handleAnalyzePhoto}
-            disabled={!photoFile || photoAnalyzing}
-            className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
-            style={{ backgroundColor: '#ea580c' }}
-          >
-            {photoAnalyzing ? 'Analyzing…' : 'Analyze Board'}
-          </button>
-          {photoNotes && (
-            <div className="rounded p-3 text-xs" style={{ backgroundColor: '#1a1000', color: '#fbbf24' }}>
-              <strong>Analysis notes:</strong> {photoNotes}
-            </div>
+              <button
+                onClick={handleAnalyzePhoto}
+                disabled={!photoFile || photoAnalyzing}
+                className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                style={{ backgroundColor: '#ea580c' }}
+              >
+                {photoAnalyzing ? 'Analyzing…' : 'Analyze Board'}
+              </button>
+              {photoNotes && (
+                <div className="rounded p-3 text-xs" style={{ backgroundColor: '#1a1000', color: '#fbbf24' }}>
+                  <strong>Analysis notes:</strong> {photoNotes}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -329,8 +389,11 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
           {/* Shared fields */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Generation</label>
-              <NumInput value={generation} onChange={setGeneration} min={1} max={30} label="Generation" />
+              <label className="block text-xs text-gray-400 mb-1">
+                Generation
+                {fromPhotoGeneration && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
+              </label>
+              <NumInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={30} label="Generation" />
             </div>
             {isSolo && (
               <div>
@@ -431,7 +494,10 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
           {/* Milestones (multiplayer only) */}
           {!isSolo && (
             <div className="rounded-xl border p-4" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
-              <h3 className="text-sm font-semibold text-white mb-3">Milestones</h3>
+              <h3 className="text-sm font-semibold text-white mb-3">
+                Milestones
+                {fromPhotoMilestones && <span className="ml-2 text-yellow-400 text-xs font-normal">From photo</span>}
+              </h3>
               <div className="space-y-3">
                 {MILESTONE_NAMES.map(name => {
                   const isClaimed = milestones[name] !== undefined
@@ -459,7 +525,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                                 type="radio"
                                 name={`milestone-${name}`}
                                 checked={milestones[name] === p.id}
-                                onChange={() => setMilestones(prev => ({ ...prev, [name]: p.id }))}
+                                onChange={() => { setFromPhotoMilestones(false); setMilestones(prev => ({ ...prev, [name]: p.id })) }}
                                 className="accent-orange-500"
                               />
                               <ColorChip color={p.color} />
@@ -478,7 +544,10 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
           {/* Awards (multiplayer only) */}
           {!isSolo && (
             <div className="rounded-xl border p-4" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
-              <h3 className="text-sm font-semibold text-white mb-3">Awards</h3>
+              <h3 className="text-sm font-semibold text-white mb-3">
+                Awards
+                {fromPhotoAwards && <span className="ml-2 text-yellow-400 text-xs font-normal">From photo</span>}
+              </h3>
               <div className="space-y-4">
                 {AWARD_NAMES.map(name => {
                   const isFunded = awards[name] !== undefined

@@ -357,7 +357,11 @@ async function analyzePhoto(req, res, next) {
     }
 
     const { buffer, mimetype } = req.file
-    const result = await analyzeBoardPhoto(buffer, mimetype)
+    let playerColors
+    try {
+      playerColors = req.body.playerColors ? JSON.parse(req.body.playerColors) : undefined
+    } catch (_) { /* ignore malformed value */ }
+    const result = await analyzeBoardPhoto(buffer, mimetype, playerColors)
     res.json(result)
   } catch (err) {
     if (err.statusCode === 503) {
