@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Family board game score tracker. Currently supports Gin Rummy (full scoring) and Terraforming Mars (placeholder). Hosted at `gametracker.chuplab.com` via NPM on the homelab Proxmox server.
+Family board game score tracker. Supports Gin Rummy (full scoring) and Terraforming Mars (full scoring with photo analysis). Hosted at `gametracker.chuplab.com` via NPM on the homelab Proxmox server.
 
 ## Git Workflow
 
@@ -111,7 +111,8 @@ Hand submission (`ginRummyController.submitHand`) runs the entire scoring pipeli
 - `/gin-rummy` — game list + leaderboard
 - `/gin-rummy/games/:id` — game detail / hand entry
 - `/gin-rummy/settings` — scoring settings (wrapped in GinRummyLayout)
-- `/terraforming-mars` — placeholder
+- `/terraforming-mars` — TM game list + leaderboard
+- `/terraforming-mars/games/:id` — TM game detail / scoring / edit scores
 - `/settings` — global settings placeholder (no site-wide settings exist yet)
 
 **Gin Rummy UI components** (`components/gin-rummy/`):
@@ -122,16 +123,34 @@ Hand submission (`ginRummyController.submitHand`) runs the entire scoring pipeli
 - `GinLeaderboard` — sortable columns (W, L, HW, HL, Pts, Pts Agst, SO); client-side sort; default sort is wins desc
 - `GinRummyLayout` — wraps all Gin Rummy pages; header strip has a ⚙ link to `/gin-rummy/settings`
 
+**Terraforming Mars UI components** (`components/terraforming-mars/`):
+- `TerraformingMarsLayout` — Mars-themed header (`#2d1000` bg, `#7c2d12` border, `#f97316` accent)
+- `NewTmGameModal` — two-step: pick mode (solo/multiplayer) → configure players; color swatch picker; registered user dropdown or guest name input; creator row locked to logged-in user
+- `TmScoringForm` — main score entry form; accepts optional `initialData`/`isEditing` props for edit mode; milestone picker is radio buttons + ColorChip (not a select); city-adjacent tooltip uses Tailwind `group`/`group-hover` (not `title`); photo tab has drag-and-drop + × remove button; calls `updateGame` when `isEditing`, `completeGame` otherwise
+- `CardVpInput` — `type="text"` input; regex ALLOWED guard `/^[\d\s+\-*/().]*$/`; mathjs live preview shows evaluated integer or "invalid"
+- `TmScoreBreakdown` — score table + winner/solo banner; milestone and award places each on own line with ColorChip; Cards cell shows only integer (no expression)
+- `TmGamesList` — list of TM games with status/date/players
+- `TmLeaderboard` — TM-specific leaderboard
+
 ### Database Schema
 
-Three application tables: `users`, `gin_rummy_games`, `gin_rummy_hands`. One config table: `settings`.
+**Gin Rummy:** `users`, `gin_rummy_games`, `gin_rummy_hands`. Config: `settings`.
 
-Key relationships:
+Key Gin Rummy relationships:
 - `gin_rummy_games.player1_id / player2_id / winner_id` → `users.id`
 - `gin_rummy_hands.game_id` → `gin_rummy_games.id` (CASCADE DELETE)
 - `gin_rummy_hands` stores `player1_running_total` and `player2_running_total` as denormalized cumulative totals to avoid recalculating on every read
 
 `gin_rummy_games.imported = 1` marks historically imported games (no real date; `hand_type = 'imported'` on all their hands). The `started_at` field is set to the import time and should be ignored in the UI when `imported = 1`.
+
+**Terraforming Mars:** 5 tables added in migration 005.
+- `tm_games` — id, created_by (→ users.id), mode (solo/multiplayer), status (active/complete), generation, solo_terraformed, created_at
+- `tm_game_players` — id, game_id (CASCADE), user_id (nullable for guests), player_name, color, tr, greeneries, city_adjacent_greeneries, card_vps, card_vps_expression, milestone_vps, award_vps, total_vps, final_rank
+- `tm_game_milestones` — id, game_id (CASCADE), milestone_name, player_id (→ tm_game_players)
+- `tm_game_awards` — id, game_id (CASCADE), award_name
+- `tm_game_award_places` — id, award_id (CASCADE), player_id (→ tm_game_players), place (1 or 2)
+
+Guest players have `user_id IS NULL` in `tm_game_players`. The site leaderboard handles guests via `UNION ALL` — guests grouped by `player_name`, row_key prefixed `g:` vs `u:` for registered users.
 
 ### Migrations
 
@@ -140,12 +159,14 @@ Key relationships:
 | `001_initial.js` | `users`, `gin_rummy_games`, `gin_rummy_hands` tables |
 | `002_settings.js` | `settings` table + default scoring values |
 | `003_bonus_toggles.js` | Adds `game_bonus_enabled` and `line_bonus_enabled` settings (both default `true`) |
+| `004_entra_auth.js` | Adds `entra_oid TEXT UNIQUE` to users; updates Kylie/Eli emails to @chuplab.com |
+| `005_terraforming_mars.js` | Adds 5 TM tables (tm_games, tm_game_players, tm_game_milestones, tm_game_awards, tm_game_award_places) |
 
-Next new game type migration should be `004_<game>.js`.
+**Next new migration: `006_<feature>.js`**
 
 ### Adding a new game type
 
-1. Add tables in a new migration file (`backend/src/db/migrations/004_<game>.js`) and register it in `database.js`
+1. Add tables in a new migration file (`backend/src/db/migrations/006_<game>.js`) and register it in `database.js`
 2. Add a scoring service in `backend/src/services/`
 3. Add routes + controller in `backend/src/routes/` and `backend/src/controllers/`
 4. Register the route in `server.js`
@@ -182,6 +203,18 @@ Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
 - Username comparisons use `LOWER()` in SQL — login and registration are case-insensitive
 - Usernames are stored as-typed (display case is preserved)
 
+## Terraforming Mars Scoring Reference
+
+Scoring categories: TR + greeneries (1 VP each) + city-adjacent greeneries (1 VP each) + card VPs (expression evaluated via mathjs) + milestone VPs (5 each, max 3 milestones) + award VPs (5 for 1st, 2 for 2nd).
+
+Competition ranking: ties share same rank, next rank skips (e.g., two tied 1st → both rank 1, next is rank 3).
+
+Photo analysis: multer memory storage → base64 → Claude Vision (claude-sonnet-4-6) → structured JSON. Returns 503 if `ANTHROPIC_API_KEY` not set. Requires `ANTHROPIC_API_KEY` in backend/.env and docker-compose.yml.
+
+Safe expression evaluation: mathjs behind regex guard `/^[\d\s+\-*/().]+$/` — never uses `eval()`. Division by zero detected via `!isFinite(result)`.
+
+Edit scores: `editGame` controller deletes existing milestones/awards then re-runs same `_writeScores` helper as `completeGame`. Works on games with `status = 'complete'`.
+
 ## Phase Status
 
 | Phase | Status | Notes |
@@ -195,9 +228,11 @@ Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
 | 7 | ✅ Complete | Dashboard, site leaderboard, Terraforming Mars placeholder |
 | 8 | ✅ Complete | Historical import script; 40 games / 250 hands loaded |
 | 9 | ✅ Complete | UI & feature polish (see below) |
-| 10 | Pending | Homelab deployment (Proxmox LXC, Docker Compose, NPM, Pi-hole, PBS) |
+| 10 | ✅ Complete | Entra ID SSO (merged PR #10 + fix PR #11) |
+| TM | ⚠️ Uncommitted | Full TM scoring on `feature/terraforming-mars-scoring` — needs commit + PR |
+| 11 | Pending | Homelab deployment (Proxmox LXC, Docker Compose, NPM, Pi-hole, PBS) |
 
-### Phase 9 — UI & Feature Polish (completed)
+### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
 - **Delete game** — participants can delete a game via confirmation modal on the game page
 - **Case-insensitive auth** — login and registration match usernames case-insensitively
@@ -207,3 +242,19 @@ Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
 - **Winner column mid-game** — hand winner appears immediately after submission without page reload
 - **Scores in game list** — completed games show `p1Score – p2Score` in the game list
 - **Bonus toggles** — Game Bonus, Line/Box Bonus, and Shutout Bonus each have an enable toggle in settings; all three are independent; changing settings retroactively recalculates all completed game scores
+
+### Phase 10 — Entra ID SSO (complete, merged PR #10)
+
+- Migration 004: adds `entra_oid TEXT UNIQUE` to users; updates Kylie/Eli emails to @chuplab.com
+- Backend: jwks-rsa validates MS token; authController has `entraAuth()` + `me()`; register/login removed
+- Frontend: @azure/msal-browser + @azure/msal-react; MsalProvider in main.jsx; signIn() in AuthContext
+- Auth timing fix: unified init effect — on mount, if MSAL has cached account → acquireTokenSilent → exchange idToken
+- Env vars needed: backend `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`; frontend `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`
+
+### TM Scoring Feature (uncommitted on `feature/terraforming-mars-scoring`)
+
+Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via Claude Vision. 36 new tests (52 total). See TM sections above for component/architecture details. Key changes beyond new files:
+- `leaderboardController.js` — rewrote as UNION ALL (registered + guests); outer WHERE (not HAVING) filters 0-game players
+- `SiteLeaderboard.jsx` — sortable columns: Wins, GR Wins, TM Wins, Played; shows guests via row_key
+- `index.css` — hides number input spinner arrows (keeps numeric keyboard on mobile)
+- `DashboardPage.jsx` — TM card no longer marked comingSoon

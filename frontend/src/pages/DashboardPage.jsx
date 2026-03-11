@@ -29,8 +29,7 @@ export function DashboardPage() {
             to="/terraforming-mars"
             icon="🪐"
             title="Terraforming Mars"
-            description="Multi-player strategy game. Score tracking coming soon."
-            comingSoon
+            description="Solo and multiplayer strategy game. Track TR, greeneries, cities, milestones, awards, and card VPs."
           />
         </div>
       </div>

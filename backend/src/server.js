@@ -15,8 +15,8 @@ app.use('/api/auth',        require('./routes/auth'))
 app.use('/api/users',       require('./routes/users'))
 app.use('/api/settings',    require('./routes/settings'))
 app.use('/api/leaderboard', require('./routes/leaderboard'))
-app.use('/api/gin-rummy',    require('./routes/ginRummy'))
-// Import routes registered in Phase 8
+app.use('/api/gin-rummy',         require('./routes/ginRummy'))
+app.use('/api/terraforming-mars', require('./routes/terraformingMars'))
 
 app.use(errorHandler)
 
