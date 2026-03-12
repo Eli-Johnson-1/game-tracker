@@ -8,6 +8,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - PORT=3000
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
+      - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
     volumes:
       - sqlite-data:/app/data
     networks:

@@ -36,6 +36,7 @@ function runMigrations() {
     require('./migrations/003_bonus_toggles'),
     require('./migrations/004_entra_auth'),
     require('./migrations/005_terraforming_mars'),
+    require('./migrations/006_nullable_password_hash'),
   ]
 
   for (const migration of migrations) {
