@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { GinRummyLayout } from '../components/gin-rummy/GinRummyLayout'
 import { GinLeaderboard } from '../components/gin-rummy/GinLeaderboard'
 import { GamesList } from '../components/gin-rummy/GamesList'
@@ -6,8 +7,11 @@ import { NewGameModal } from '../components/gin-rummy/NewGameModal'
 import { Button } from '../components/common/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { listGames } from '../api/ginRummy'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export function GinRummyPage() {
+  usePageTitle('Gin Rummy')
+  const navigate = useNavigate()
   const [games, setGames] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
@@ -19,7 +23,7 @@ export function GinRummyPage() {
   }, [])
 
   function onGameCreated(game) {
-    setGames(prev => [{ ...game, hand_count: 0 }, ...prev])
+    navigate(`/gin-rummy/games/${game.id}`)
   }
 
   return (

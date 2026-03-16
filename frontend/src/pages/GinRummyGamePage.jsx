@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useGinRummyGame } from '../hooks/useGinRummyGame'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { deleteGame } from '../api/ginRummy'
 import { GinRummyLayout } from '../components/gin-rummy/GinRummyLayout'
 import { ScoreTable } from '../components/gin-rummy/ScoreTable'
@@ -17,6 +18,8 @@ export function GinRummyGamePage() {
   const { game, hands, loading, error, endGame, onHandSubmitted } = useGinRummyGame(id)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  usePageTitle(game ? `${game.player1_username} vs ${game.player2_username}` : 'Gin Rummy Game')
 
   async function handleDeleteConfirm() {
     setDeleting(true)
@@ -45,6 +48,7 @@ export function GinRummyGamePage() {
   }
 
   const isParticipant = user.id === game.player1_id || user.id === game.player2_id
+  const canDelete = isParticipant || user.is_admin
   const lastHand = hands.length > 0 ? hands[hands.length - 1] : null
 
   return (
@@ -59,13 +63,13 @@ export function GinRummyGamePage() {
       </Link>
 
       {/* Players & date */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <h2 className="text-white font-semibold text-lg" style={{ fontFamily: 'Georgia, serif' }}>
           {game.player1_username}{' '}
           <span style={{ color: '#7ab893' }}>vs</span>{' '}
           {game.player2_username}
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <span className="text-xs" style={{ color: '#7ab893' }}>
             {game.imported
               ? 'Historical'
@@ -73,7 +77,7 @@ export function GinRummyGamePage() {
                   month: 'short', day: 'numeric', year: 'numeric',
                 })}
           </span>
-          {isParticipant && (
+          {canDelete && (
             <button
               onClick={() => setShowDeleteModal(true)}
               className="text-xs px-2 py-1 rounded border transition-colors"

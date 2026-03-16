@@ -1,4 +1,7 @@
+import { usePageTitle } from '../hooks/usePageTitle'
+
 export function SettingsPage() {
+  usePageTitle('Settings')
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-4">Settings</h1>

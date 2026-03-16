@@ -56,7 +56,20 @@ export function ScoreTable({ game, hands }) {
           </tbody>
           {hands.length > 0 && (
             <tfoot>
-              <tr style={{ borderTop: '2px solid #2d5a40', backgroundColor: '#0f1f16' }}>
+              {/* Mobile: 3-column span (Winner column hidden) */}
+              <tr className="sm:hidden" style={{ borderTop: '2px solid #2d5a40', backgroundColor: '#0f1f16' }}>
+                <td colSpan={3} className="px-3 py-2 text-xs uppercase tracking-wide" style={{ color: '#7ab893' }}>
+                  Running Total
+                </td>
+                <td className="px-3 py-2 text-right font-bold text-white">
+                  {hands[hands.length - 1].player1_running_total}
+                </td>
+                <td className="px-3 py-2 text-right font-bold text-white">
+                  {hands[hands.length - 1].player2_running_total}
+                </td>
+              </tr>
+              {/* Desktop: 4-column span (includes Winner column) */}
+              <tr className="hidden sm:table-row" style={{ borderTop: '2px solid #2d5a40', backgroundColor: '#0f1f16' }}>
                 <td colSpan={4} className="px-3 py-2 text-xs uppercase tracking-wide" style={{ color: '#7ab893' }}>
                   Running Total
                 </td>

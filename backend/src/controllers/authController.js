@@ -87,7 +87,10 @@ function me(req, res, next) {
     const user = db.prepare('SELECT id, username, email, created_at FROM users WHERE id = ?')
       .get(req.user.id)
     if (!user) return res.status(404).json({ error: 'User not found' })
-    res.json({ user })
+    const isAdmin = process.env.ADMIN_USERNAME
+      ? user.username.toLowerCase() === process.env.ADMIN_USERNAME.toLowerCase()
+      : false
+    res.json({ user: { ...user, is_admin: isAdmin } })
   } catch (err) {
     next(err)
   }
