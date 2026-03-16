@@ -114,7 +114,11 @@ function deleteGame(req, res, next) {
     const db = getDb()
     const game = db.prepare('SELECT * FROM tm_games WHERE id = ?').get(req.params.id)
     if (!game) return next(new NotFoundError('Game not found'))
-    if (game.created_by !== req.user.id) {
+
+    const isAdmin = process.env.ADMIN_USERNAME
+      ? req.user.username.toLowerCase() === process.env.ADMIN_USERNAME.toLowerCase()
+      : false
+    if (game.created_by !== req.user.id && !isAdmin) {
       return next(new ForbiddenError('Only the game creator can delete this game'))
     }
 
@@ -298,7 +302,10 @@ function editGame(req, res, next) {
     const game = db.prepare('SELECT * FROM tm_games WHERE id = ?').get(gameId)
     if (!game) return next(new NotFoundError('Game not found'))
     if (game.status !== 'complete') return next(new ValidationError('Game is not yet complete'))
-    if (game.created_by !== req.user.id) return next(new ForbiddenError('Only the game creator can edit scores'))
+    const isAdmin = process.env.ADMIN_USERNAME
+      ? req.user.username.toLowerCase() === process.env.ADMIN_USERNAME.toLowerCase()
+      : false
+    if (game.created_by !== req.user.id && !isAdmin) return next(new ForbiddenError('Only the game creator can edit scores'))
 
     const dbPlayers = db.prepare('SELECT * FROM tm_game_players WHERE game_id = ?').all(gameId)
     const dbPlayerMap = Object.fromEntries(dbPlayers.map(p => [p.id, p]))

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TerraformingMarsLayout } from '../components/terraforming-mars/TerraformingMarsLayout'
 import { TmLeaderboard } from '../components/terraforming-mars/TmLeaderboard'
 import { TmGamesList } from '../components/terraforming-mars/TmGamesList'
@@ -6,8 +7,11 @@ import { NewTmGameModal } from '../components/terraforming-mars/NewTmGameModal'
 import { Button } from '../components/common/Button'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { listGames } from '../api/terraformingMars'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export function TerraformingMarsPage() {
+  usePageTitle('Terraforming Mars')
+  const navigate = useNavigate()
   const [games, setGames] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
@@ -19,7 +23,7 @@ export function TerraformingMarsPage() {
   }, [])
 
   function onGameCreated(game) {
-    setGames(prev => [game, ...prev])
+    navigate(`/terraforming-mars/games/${game.id}`)
   }
 
   return (

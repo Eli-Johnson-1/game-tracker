@@ -108,7 +108,10 @@ function deleteGame(req, res, next) {
     const game = db.prepare('SELECT * FROM gin_rummy_games WHERE id = ?').get(req.params.id)
     if (!game) return next(new NotFoundError('Game not found'))
 
-    if (game.player1_id !== req.user.id && game.player2_id !== req.user.id) {
+    const isAdmin = process.env.ADMIN_USERNAME
+      ? req.user.username.toLowerCase() === process.env.ADMIN_USERNAME.toLowerCase()
+      : false
+    if (game.player1_id !== req.user.id && game.player2_id !== req.user.id && !isAdmin) {
       return next(new ForbiddenError('You are not a participant in this game'))
     }
 

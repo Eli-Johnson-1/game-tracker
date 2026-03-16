@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { getGame, deleteGame } from '../api/terraformingMars'
 import { TerraformingMarsLayout } from '../components/terraforming-mars/TerraformingMarsLayout'
 import { TmScoringForm } from '../components/terraforming-mars/TmScoringForm'
@@ -19,6 +20,9 @@ export function TerraformingMarsGamePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [editing, setEditing] = useState(false)
+
+  const playerNames = game ? game.players.map(p => p.player_name).join(' · ') : null
+  usePageTitle(playerNames || 'TM Game')
 
   useEffect(() => {
     getGame(id)
@@ -54,7 +58,8 @@ export function TerraformingMarsGamePage() {
   }
 
   const isCreator = user.id === game.created_by
-  const playerNames = game.players.map(p => p.player_name).join(' · ')
+  const canDelete = isCreator || user.is_admin
+  const canEdit = (isCreator || user.is_admin) && game.status === 'complete'
   const date = game.created_at
     ? new Date(game.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     : ''
@@ -71,7 +76,7 @@ export function TerraformingMarsGamePage() {
       </Link>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
         <div>
           <h2 className="text-white font-semibold text-lg" style={{ fontFamily: 'Georgia, serif' }}>
             {playerNames}
@@ -80,10 +85,10 @@ export function TerraformingMarsGamePage() {
             {game.mode === 'solo' ? 'Solo' : 'Multiplayer'} · {date}
           </p>
         </div>
-        {isCreator && (
+        {canDelete && (
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="text-xs px-2 py-1 rounded border transition-colors"
+            className="text-xs px-2 py-1 rounded border transition-colors shrink-0"
             style={{ color: '#f87171', borderColor: '#f87171' }}
           >
             Delete
@@ -95,7 +100,7 @@ export function TerraformingMarsGamePage() {
       {game.status === 'complete' && !editing && (
         <>
           <TmScoreBreakdown game={game} />
-          {isCreator && (
+          {canEdit && (
             <button
               onClick={() => setEditing(true)}
               className="text-sm px-3 py-1.5 rounded border transition-colors mb-4"
@@ -128,13 +133,13 @@ export function TerraformingMarsGamePage() {
         </>
       )}
 
-      {/* Active: scoring form (creator only) */}
-      {game.status === 'active' && isCreator && (
+      {/* Active: scoring form (creator or admin) */}
+      {game.status === 'active' && (isCreator || user.is_admin) && (
         <TmScoringForm game={game} onCompleted={setGame} />
       )}
 
       {/* Active: non-creator view */}
-      {game.status === 'active' && !isCreator && (
+      {game.status === 'active' && !isCreator && !user.is_admin && (
         <p className="text-sm text-center py-4" style={{ color: '#f97316' }}>
           Game in progress — only the creator can enter scores.
         </p>

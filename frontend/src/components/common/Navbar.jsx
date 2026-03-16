@@ -20,27 +20,28 @@ export function Navbar() {
             to="/"
             end
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm transition-colors ${
+              `px-2 sm:px-3 py-1.5 rounded-md text-sm transition-colors ${
                 isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`
             }
           >
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
+            <span className="sm:hidden">Home</span>
           </NavLink>
           <NavLink
             to="/gin-rummy"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm transition-colors ${
+              `px-2 sm:px-3 py-1.5 rounded-md text-sm transition-colors ${
                 isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`
             }
           >
-            ♠ Gin Rummy
+            ♠<span className="hidden sm:inline"> Gin Rummy</span>
           </NavLink>
           <NavLink
             to="/terraforming-mars"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm transition-colors ${
+              `px-2 sm:px-3 py-1.5 rounded-md text-sm transition-colors ${
                 isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`
             }
@@ -50,12 +51,13 @@ export function Navbar() {
           <NavLink
             to="/settings"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm transition-colors ${
+              `px-2 sm:px-3 py-1.5 rounded-md text-sm transition-colors ${
                 isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`
             }
           >
-            Settings
+            <span className="hidden sm:inline">Settings</span>
+            <span className="sm:hidden">⚙</span>
           </NavLink>
         </div>
 

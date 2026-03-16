@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { GinRummyLayout } from '../components/gin-rummy/GinRummyLayout'
 import { SettingsPanel } from '../components/settings/SettingsPanel'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export function GinRummySettingsPage() {
+  usePageTitle('Gin Rummy Settings')
   return (
     <GinRummyLayout>
       <Link

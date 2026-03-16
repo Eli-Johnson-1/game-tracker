@@ -162,7 +162,7 @@ Guest players have `user_id IS NULL` in `tm_game_players`. The site leaderboard 
 | `004_entra_auth.js` | Adds `entra_oid TEXT UNIQUE` to users; updates Kylie/Eli emails to @chuplab.com |
 | `005_terraforming_mars.js` | Adds 5 TM tables (tm_games, tm_game_players, tm_game_milestones, tm_game_awards, tm_game_award_places) |
 
-**Next new migration: `006_<feature>.js`**
+**Next new migration: `007_<feature>.js`**
 
 ### Adding a new game type
 
@@ -202,6 +202,7 @@ Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
 
 - Username comparisons use `LOWER()` in SQL — login and registration are case-insensitive
 - Usernames are stored as-typed (display case is preserved)
+- `me()` returns `is_admin: true` when `req.user.username` matches `ADMIN_USERNAME` env var (case-insensitive); stored in `AuthContext` as `user.is_admin`
 
 ## Terraforming Mars Scoring Reference
 
@@ -229,8 +230,9 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 | 8 | ✅ Complete | Historical import script; 40 games / 250 hands loaded |
 | 9 | ✅ Complete | UI & feature polish (see below) |
 | 10 | ✅ Complete | Entra ID SSO (merged PR #10 + fix PR #11) |
-| TM | ⚠️ Uncommitted | Full TM scoring on `feature/terraforming-mars-scoring` — needs commit + PR |
-| 11 | Pending | Homelab deployment (Proxmox LXC, Docker Compose, NPM, Pi-hole, PBS) |
+| TM | ✅ Complete | Full TM scoring merged PR #12 |
+| 11 | ✅ Complete | Deployed to LXC 105 (192.168.40.2, VLAN 40); live at https://gametracker.chuplab.com |
+| 12 | 🔄 In progress | Mobile UI polish, admin control, page titles (branch: `feature/mobile-ui-improvements`) |
 
 ### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
@@ -251,10 +253,21 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 - Auth timing fix: unified init effect — on mount, if MSAL has cached account → acquireTokenSilent → exchange idToken
 - Env vars needed: backend `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`; frontend `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`
 
-### TM Scoring Feature (uncommitted on `feature/terraforming-mars-scoring`)
+### TM Scoring Feature (complete, merged PR #12)
 
 Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via Claude Vision. 36 new tests (52 total). See TM sections above for component/architecture details. Key changes beyond new files:
 - `leaderboardController.js` — rewrote as UNION ALL (registered + guests); outer WHERE (not HAVING) filters 0-game players
 - `SiteLeaderboard.jsx` — sortable columns: Wins, GR Wins, TM Wins, Played; shows guests via row_key
 - `index.css` — hides number input spinner arrows (keeps numeric keyboard on mobile)
 - `DashboardPage.jsx` — TM card no longer marked comingSoon
+
+### Phase 12 — Mobile UI, Admin Control, Page Titles (in progress, branch: `feature/mobile-ui-improvements`)
+
+- **Mobile navbar** — "Dashboard" → "Home", "♠ Gin Rummy" → "♠", "Settings" → "⚙" on small screens; reduced nav padding on mobile
+- **ScoreTable footer** — two responsive `<tfoot>` rows fix Running Total colspan misalignment when Winner column is hidden on mobile
+- **Game page headers** — `flex-col sm:flex-row` stacking on both GR and TM game pages
+- **Auto-redirect** — creating a new GR or TM game navigates directly to the game page instead of returning to the list
+- **Admin control** — `ADMIN_USERNAME` env var grants a user delete/edit rights on any game regardless of participation; `is_admin` field returned from `/me` endpoint
+- **Page titles** — `usePageTitle` hook sets `${title} | ChupLab Game Tracker` per page; game pages use player names dynamically; `frontend/index.html` default changed from "frontend"
+
+**Admin env var:** `ADMIN_USERNAME=Eli Johnson` in `backend/.env` (not committed). Add to `docker-compose.yml` backend env for production.

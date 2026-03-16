@@ -1,8 +1,10 @@
 import { useAuth } from '../hooks/useAuth'
 import { SiteLeaderboard } from '../components/dashboard/SiteLeaderboard'
 import { GameCard } from '../components/dashboard/GameCard'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export function DashboardPage() {
+  usePageTitle('Dashboard')
   const { user } = useAuth()
 
   return (
