@@ -233,6 +233,8 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 | TM | ✅ Complete | Full TM scoring merged PR #12 |
 | 11 | ✅ Complete | Deployed to LXC 105 (192.168.40.2, VLAN 40); live at https://gametracker.chuplab.com |
 | 12 | ✅ Complete | Mobile UI polish, admin control, page titles (merged PR #14) |
+| 13 | ✅ Complete | TM UX follow-ups: TR scroll picker, remove card VP +/− buttons (merged PR #16) |
+| 14 | ✅ Complete | TM form fixes: CardVpInput +/− buttons restored w/ focus fix, generation default 1, solo TR default 14 (merged PR #17) |
 
 ### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
@@ -270,4 +272,16 @@ Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via C
 - **Admin control** — `ADMIN_USERNAME` env var grants a user delete/edit rights on any game regardless of participation; `is_admin` field returned from `/me` endpoint
 - **Page titles** — `usePageTitle` hook sets `${title} | ChupLab Game Tracker` per page; game pages use player names dynamically; `frontend/index.html` default changed from "frontend"
 
-**Admin env var:** `ADMIN_USERNAME=Eli Johnson` in `backend/.env` (not committed). Still needs to be added to `docker-compose.yml` backend env section before next production redeploy.
+**Admin env var:** `ADMIN_USERNAME=Eli Johnson` in `backend/.env` (not committed) and in `docker-compose.yml` backend env section.
+
+### Phase 13 — TM UX Follow-ups (complete, merged PR #16)
+
+- **TR scroll picker** — TR field swapped from plain number input to `SelectInput` (0–100), matching generation/greeneries/city-adjacent UX
+- **Card VP input** — removed +/− append buttons; changed `inputMode` to `decimal` so iOS number pad natively includes a `−` key; expressions like `13+2+5` still work on desktop
+- Removed now-unused `NumInput` component from `TmScoringForm`
+
+### Phase 14 — TM Form Fixes (complete, merged PR #17)
+
+- **CardVpInput +/− buttons restored** — re-added `+` and `−` append buttons with focus fix: `onMouseDown={e => e.preventDefault()}` prevents blur on desktop; `inputRef.current?.focus()` after append re-opens keyboard on mobile; `inputMode` reverted to `numeric`
+- **Generation default** — new games default to generation 1 (was 14)
+- **TR default by mode** — `buildPlayerState` takes `mode` arg; solo games default TR to 14, multiplayer to 20 (was always 20)
