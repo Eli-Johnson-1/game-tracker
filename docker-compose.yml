@@ -10,6 +10,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
     volumes:
       - sqlite-data:/app/data
     networks:

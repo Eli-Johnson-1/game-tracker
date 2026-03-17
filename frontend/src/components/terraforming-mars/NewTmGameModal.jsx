@@ -38,12 +38,20 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
     listUsers().then(({ data }) => setAllUsers(data.users)).catch(() => {})
   }, [open])
 
+  function firstAvailableUser(excludeIds) {
+    return allUsers.find(u => !excludeIds.includes(u.id)) || null
+  }
+
   function pickMode(m) {
     setMode(m)
     if (m === 'solo') {
       setPlayers([makePlayer(user.id, user.username, 'red')])
     } else {
-      setPlayers([makePlayer(user.id, user.username, 'red'), makePlayer(null, '', 'green')])
+      const availableUser = firstAvailableUser([user.id])
+      const p2 = availableUser
+        ? makePlayer(availableUser.id, availableUser.username, 'green')
+        : makePlayer(null, '', 'green')
+      setPlayers([makePlayer(user.id, user.username, 'red'), p2])
     }
     setStep(2)
   }
@@ -59,7 +67,12 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
   function addPlayer() {
     if (players.length >= 5) return
     const available = COLORS.find(c => !usedColors().includes(c))
-    setPlayers(prev => [...prev, makePlayer(null, '', available || 'red')])
+    const usedIds = players.filter(p => p.user_id).map(p => p.user_id)
+    const availableUser = firstAvailableUser(usedIds)
+    const newPlayer = availableUser
+      ? makePlayer(availableUser.id, availableUser.username, available || 'red')
+      : makePlayer(null, '', available || 'red')
+    setPlayers(prev => [...prev, newPlayer])
   }
 
   function removePlayer(i) {
@@ -67,7 +80,20 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
   }
 
   function setColor(i, color) {
-    updatePlayer(i, { color })
+    setPlayers(prev => {
+      const oldColor = prev[i].color
+      const conflictIdx = prev.findIndex((p, idx) => idx !== i && p.color === color)
+      if (conflictIdx === -1) {
+        // Color is free — just set it
+        return prev.map((p, idx) => idx === i ? { ...p, color } : p)
+      }
+      // Swap: give the conflict player our old color
+      return prev.map((p, idx) => {
+        if (idx === i) return { ...p, color }
+        if (idx === conflictIdx) return { ...p, color: oldColor }
+        return p
+      })
+    })
   }
 
   function toggleRegistered(i, isRegistered) {
@@ -150,7 +176,6 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
 
           <div className="space-y-3">
             {players.map((p, i) => {
-              const taken = players.filter((_, j) => j !== i).map(pp => pp.color)
               return (
                 <div key={i} className="rounded-lg p-3 border" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
                   <div className="flex items-center justify-between mb-2">
@@ -168,9 +193,8 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
                       <button
                         key={c}
                         onClick={() => setColor(i, c)}
-                        disabled={taken.includes(c)}
                         title={COLOR_STYLES[c].label}
-                        className="w-7 h-7 rounded-full border-2 transition-all disabled:opacity-25"
+                        className="w-7 h-7 rounded-full border-2 transition-all"
                         style={{
                           backgroundColor: COLOR_STYLES[c].bg,
                           borderColor: p.color === c ? 'white' : 'transparent',
