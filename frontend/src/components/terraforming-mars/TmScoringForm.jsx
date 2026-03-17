@@ -31,11 +31,27 @@ function NumInput({ value, onChange, min = 0, max, label }) {
       type="number"
       value={value}
       onChange={e => onChange(Math.max(min, max !== undefined ? Math.min(max, Number(e.target.value)) : Number(e.target.value)))}
+      onFocus={e => e.target.select()}
       min={min}
       max={max}
+      inputMode="numeric"
       aria-label={label}
       className="w-20 rounded px-2 py-1 text-sm bg-gray-700 border border-gray-600 text-white text-right focus:outline-none focus:ring-1 focus:ring-orange-500"
     />
+  )
+}
+
+function SelectInput({ value, onChange, min = 0, max }) {
+  const options = []
+  for (let i = min; i <= max; i++) options.push(i)
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(Number(e.target.value))}
+      className="w-20 rounded px-2 py-1 text-sm bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+    >
+      {options.map(n => <option key={n} value={n}>{n}</option>)}
+    </select>
   )
 }
 
@@ -393,7 +409,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                 Generation
                 {fromPhotoGeneration && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
               </label>
-              <NumInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={30} label="Generation" />
+              <SelectInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={25} />
             </div>
             {isSolo && (
               <div>
@@ -452,10 +468,10 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                         Greeneries
                         {d.fromPhoto?.greeneries && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
                       </label>
-                      <NumInput
+                      <SelectInput
                         value={d.greeneries}
                         onChange={v => updatePlayer(p.id, { greeneries: v, fromPhoto: { ...d.fromPhoto, greeneries: false } })}
-                        label={`Greeneries for ${p.player_name}`}
+                        max={40}
                       />
                     </div>
 
@@ -471,10 +487,10 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                         </span>
                         {d.fromPhoto?.city_adjacent_greeneries && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
                       </label>
-                      <NumInput
+                      <SelectInput
                         value={d.city_adjacent_greeneries}
                         onChange={v => updatePlayer(p.id, { city_adjacent_greeneries: v, fromPhoto: { ...d.fromPhoto, city_adjacent_greeneries: false } })}
-                        label={`City-adjacent greeneries for ${p.player_name}`}
+                        max={40}
                       />
                     </div>
 
