@@ -232,7 +232,7 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 | 10 | ✅ Complete | Entra ID SSO (merged PR #10 + fix PR #11) |
 | TM | ✅ Complete | Full TM scoring merged PR #12 |
 | 11 | ✅ Complete | Deployed to LXC 105 (192.168.40.2, VLAN 40); live at https://gametracker.chuplab.com |
-| 12 | 🔄 In progress | Mobile UI polish, admin control, page titles (branch: `feature/mobile-ui-improvements`) |
+| 12 | ✅ Complete | Mobile UI polish, admin control, page titles (merged PR #14) |
 
 ### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
@@ -261,7 +261,7 @@ Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via C
 - `index.css` — hides number input spinner arrows (keeps numeric keyboard on mobile)
 - `DashboardPage.jsx` — TM card no longer marked comingSoon
 
-### Phase 12 — Mobile UI, Admin Control, Page Titles (in progress, branch: `feature/mobile-ui-improvements`)
+### Phase 12 — Mobile UI, Admin Control, Page Titles (complete, merged PR #14)
 
 - **Mobile navbar** — "Dashboard" → "Home", "♠ Gin Rummy" → "♠", "Settings" → "⚙" on small screens; reduced nav padding on mobile
 - **ScoreTable footer** — two responsive `<tfoot>` rows fix Running Total colspan misalignment when Winner column is hidden on mobile
@@ -270,4 +270,4 @@ Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via C
 - **Admin control** — `ADMIN_USERNAME` env var grants a user delete/edit rights on any game regardless of participation; `is_admin` field returned from `/me` endpoint
 - **Page titles** — `usePageTitle` hook sets `${title} | ChupLab Game Tracker` per page; game pages use player names dynamically; `frontend/index.html` default changed from "frontend"
 
-**Admin env var:** `ADMIN_USERNAME=Eli Johnson` in `backend/.env` (not committed). Add to `docker-compose.yml` backend env for production.
+**Admin env var:** `ADMIN_USERNAME=Eli Johnson` in `backend/.env` (not committed). Still needs to be added to `docker-compose.yml` backend env section before next production redeploy.
