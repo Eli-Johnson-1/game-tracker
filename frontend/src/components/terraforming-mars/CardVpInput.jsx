@@ -29,6 +29,16 @@ export function CardVpInput({ value, onChange }) {
     onChange({ expression: text, value: preview ?? 0 })
   }
 
+  function appendOp(op) {
+    const next = raw + op
+    if (ALLOWED.test(next)) {
+      setRaw(next)
+      const preview = safePreview(next)
+      onChange({ expression: next, value: preview ?? 0 })
+      inputRef.current?.focus()
+    }
+  }
+
   const preview = safePreview(raw)
   const isInvalid = raw.trim() !== '' && preview === null
 
@@ -37,7 +47,7 @@ export function CardVpInput({ value, onChange }) {
       <input
         ref={inputRef}
         type="text"
-        inputMode="decimal"
+        inputMode="numeric"
         value={raw}
         onChange={handleChange}
         onFocus={e => e.target.select()}
@@ -45,6 +55,18 @@ export function CardVpInput({ value, onChange }) {
         className="w-full rounded px-2 py-1 text-sm bg-gray-700 border text-white placeholder-gray-500 focus:outline-none focus:ring-1"
         style={{ borderColor: isInvalid ? '#f87171' : '#4b5563', focusRingColor: '#ea580c' }}
       />
+      <button
+        type="button"
+        onMouseDown={e => e.preventDefault()}
+        onClick={() => appendOp('+')}
+        className="px-2 py-1 rounded text-sm font-bold text-white bg-gray-600 hover:bg-gray-500 transition-colors flex-shrink-0"
+      >+</button>
+      <button
+        type="button"
+        onMouseDown={e => e.preventDefault()}
+        onClick={() => appendOp('-')}
+        className="px-2 py-1 rounded text-sm font-bold text-white bg-gray-600 hover:bg-gray-500 transition-colors flex-shrink-0"
+      >−</button>
       <span className="text-xs whitespace-nowrap" style={{ color: isInvalid ? '#f87171' : '#9ca3af', minWidth: 40 }}>
         {raw.trim() === '' ? '= 0' : isInvalid ? 'invalid' : `= ${preview}`}
       </span>

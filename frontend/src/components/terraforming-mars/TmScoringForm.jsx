@@ -39,11 +39,12 @@ function SelectInput({ value, onChange, min = 0, max }) {
   )
 }
 
-function buildPlayerState(players, initialData) {
+function buildPlayerState(players, initialData, mode) {
+  const defaultTr = mode === 'solo' ? 14 : 20
   return Object.fromEntries(players.map(p => {
     const saved = initialData?.players?.find(ip => ip.id === p.id)
     return [p.id, {
-      tr: saved?.tr ?? 20,
+      tr: saved?.tr ?? defaultTr,
       greeneries: saved?.greeneries ?? 0,
       city_adjacent_greeneries: saved?.city_adjacent_greeneries ?? 0,
       card_vps_expression: saved?.card_vps_expression ?? '',
@@ -73,9 +74,9 @@ function buildAwardState(initialData) {
 
 export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   const [tab, setTab] = useState('manual')
-  const [generation, setGeneration] = useState(initialData?.generation ?? 14)
+  const [generation, setGeneration] = useState(initialData?.generation ?? 1)
   const [soloTerraformed, setSoloTerraformed] = useState(initialData?.solo_terraformed === 1)
-  const [playerData, setPlayerData] = useState(() => buildPlayerState(game.players, initialData))
+  const [playerData, setPlayerData] = useState(() => buildPlayerState(game.players, initialData, game.mode))
   const [milestones, setMilestones] = useState(() => buildMilestoneState(initialData))
   const [awards, setAwards] = useState(() => buildAwardState(initialData))
 
