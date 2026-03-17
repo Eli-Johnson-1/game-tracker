@@ -25,22 +25,6 @@ function ColorChip({ color }) {
   )
 }
 
-function NumInput({ value, onChange, min = 0, max, label }) {
-  return (
-    <input
-      type="number"
-      value={value}
-      onChange={e => onChange(Math.max(min, max !== undefined ? Math.min(max, Number(e.target.value)) : Number(e.target.value)))}
-      onFocus={e => e.target.select()}
-      min={min}
-      max={max}
-      inputMode="numeric"
-      aria-label={label}
-      className="w-20 rounded px-2 py-1 text-sm bg-gray-700 border border-gray-600 text-white text-right focus:outline-none focus:ring-1 focus:ring-orange-500"
-    />
-  )
-}
-
 function SelectInput({ value, onChange, min = 0, max }) {
   const options = []
   for (let i = min; i <= max; i++) options.push(i)
@@ -455,11 +439,10 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                         TR
                         {d.fromPhoto?.tr && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
                       </label>
-                      <NumInput
+                      <SelectInput
                         value={d.tr}
                         onChange={v => updatePlayer(p.id, { tr: v, fromPhoto: { ...d.fromPhoto, tr: false } })}
-                        min={0} max={100}
-                        label={`TR for ${p.player_name}`}
+                        max={100}
                       />
                     </div>
 
