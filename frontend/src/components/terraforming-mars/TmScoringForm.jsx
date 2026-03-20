@@ -313,13 +313,14 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
         venus_scale: !isSolo && !!game.venus_next && !game.imported ? venusScale : undefined,
         players: game.players.map(p => {
           const d = playerData[p.id]
+          const isTied = showTiebreaker && liveVp(p.id) === maxVp
           return {
             player_id: p.id,
             tr: d.tr,
             greeneries: d.greeneries,
             city_adjacent_greeneries: d.city_adjacent_greeneries,
             card_vps_expression: d.card_vps_expression || '',
-            mega_credits: d.mega_credits ?? 0,
+            mega_credits: isTied ? (d.mega_credits ?? 0) : 0,
           }
         }),
         milestones: game.imported
@@ -828,19 +829,17 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
           {showTiebreaker && (
             <div className="rounded-xl border p-4" style={{ borderColor: '#ca8a04', backgroundColor: '#2d1a00' }}>
               <h3 className="text-sm font-semibold text-yellow-300 mb-1">Tiebreaker: M€ (Mega Credits)</h3>
-              <p className="text-xs text-gray-400 mb-3">Two or more players are tied. Enter each player's current M€ to break the tie.</p>
+              <p className="text-xs text-gray-400 mb-3">Tied for first. Enter each tied player's current M€ to break the tie.</p>
               <div className="space-y-2">
-                {game.players.map(p => (
+                {game.players.filter(p => liveVp(p.id) === maxVp).map(p => (
                   <div key={p.id} className="flex items-center gap-3">
                     <ColorChip color={p.color} />
                     <span className="text-sm text-white flex-1">{p.player_name}</span>
-                    <span className="text-xs text-gray-400">{liveVp(p.id)} VP</span>
-                    <input
-                      type="number"
-                      min="0"
+                    <SelectInput
                       value={playerData[p.id].mega_credits}
-                      onChange={e => updatePlayer(p.id, { mega_credits: Math.max(0, Number(e.target.value) || 0) })}
-                      className="w-20 rounded px-2 py-1 text-sm bg-gray-700 border border-yellow-700 text-white focus:outline-none focus:ring-1 focus:ring-yellow-500 text-right"
+                      onChange={v => updatePlayer(p.id, { mega_credits: v })}
+                      min={0}
+                      max={200}
                     />
                     <span className="text-xs text-gray-400">M€</span>
                   </div>
