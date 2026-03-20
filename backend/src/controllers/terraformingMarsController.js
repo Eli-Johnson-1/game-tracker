@@ -151,6 +151,10 @@ function deleteGame(req, res, next) {
 function _processBody(game, dbPlayerMap, body) {
   const { generation, solo_terraformed, venus_scale, players, milestones = [], awards = [] } = body
 
+  if (!game.imported && (generation === undefined || generation === null)) {
+    throw new ValidationError('generation is required for non-historical games')
+  }
+
   if (game.mode === 'multiplayer' && game.venus_next && !game.imported) {
     if (venus_scale === undefined || venus_scale === null) {
       throw new ValidationError('venus_scale is required for multiplayer Venus Next games')
