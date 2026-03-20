@@ -306,7 +306,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
     setSubmitting(true)
     try {
       const payload = {
-        generation,
+        generation: game.imported ? undefined : generation,
         solo_terraformed: game.mode === 'solo' ? soloTerraformed : undefined,
         venus_scale: !isSolo && game.venus_next && !game.imported ? venusScale : undefined,
         players: game.players.map(p => {
@@ -452,13 +452,15 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
         <div className="space-y-6">
           {/* Shared fields */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
-                Generation
-                {fromPhotoGeneration && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
-              </label>
-              <SelectInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={25} />
-            </div>
+            {!game.imported && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">
+                  Generation
+                  {fromPhotoGeneration && <span className="ml-1 text-yellow-400 text-xs">From photo</span>}
+                </label>
+                <SelectInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={25} />
+              </div>
+            )}
             {!isSolo && game.venus_next && !game.imported && (
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Venus scale (%)</label>
