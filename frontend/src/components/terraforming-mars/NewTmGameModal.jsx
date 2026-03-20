@@ -6,14 +6,15 @@ import { useAuth } from '../../hooks/useAuth'
 import { listUsers } from '../../api/users'
 import { createGame } from '../../api/terraformingMars'
 
-const COLORS = ['red', 'green', 'blue', 'yellow', 'black']
+const COLORS = ['red', 'green', 'blue', 'yellow', 'black', 'unknown']
 
 const COLOR_STYLES = {
-  red:    { bg: '#dc2626', label: 'Red' },
-  green:  { bg: '#16a34a', label: 'Green' },
-  blue:   { bg: '#2563eb', label: 'Blue' },
-  yellow: { bg: '#ca8a04', label: 'Yellow' },
-  black:  { bg: '#374151', label: 'Black' },
+  red:     { bg: '#dc2626', label: 'Red' },
+  green:   { bg: '#16a34a', label: 'Green' },
+  blue:    { bg: '#2563eb', label: 'Blue' },
+  yellow:  { bg: '#ca8a04', label: 'Yellow' },
+  black:   { bg: '#374151', label: 'Black' },
+  unknown: { bg: '#6b7280', label: 'Unknown' },
 }
 
 function makePlayer(userId, username, color) {
@@ -60,14 +61,16 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
 
   function handleNext() {
     if (!mode) return
+    const defaultColor = historical ? 'unknown' : 'red'
     if (mode === 'solo') {
-      setPlayers([makePlayer(user.id, user.username, 'red')])
+      setPlayers([makePlayer(user.id, user.username, defaultColor)])
     } else {
+      const p2Color = historical ? 'unknown' : 'green'
       const availableUser = firstAvailableUser([user.id])
       const p2 = availableUser
-        ? makePlayer(availableUser.id, availableUser.username, 'green')
-        : makePlayer(null, '', 'green')
-      setPlayers([makePlayer(user.id, user.username, 'red'), p2])
+        ? makePlayer(availableUser.id, availableUser.username, p2Color)
+        : makePlayer(null, '', p2Color)
+      setPlayers([makePlayer(user.id, user.username, defaultColor), p2])
     }
     setStep(2)
   }
@@ -82,12 +85,14 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
 
   function addPlayer() {
     if (players.length >= 5) return
-    const available = COLORS.find(c => !usedColors().includes(c))
+    const color = historical
+      ? 'unknown'
+      : (COLORS.filter(c => c !== 'unknown').find(c => !usedColors().includes(c)) || 'red')
     const usedIds = players.filter(p => p.user_id).map(p => p.user_id)
     const availableUser = firstAvailableUser(usedIds)
     const newPlayer = availableUser
-      ? makePlayer(availableUser.id, availableUser.username, available || 'red')
-      : makePlayer(null, '', available || 'red')
+      ? makePlayer(availableUser.id, availableUser.username, color)
+      : makePlayer(null, '', color)
     setPlayers(prev => [...prev, newPlayer])
   }
 
@@ -98,6 +103,10 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
   function setColor(i, color) {
     setPlayers(prev => {
       const oldColor = prev[i].color
+      // 'unknown' can be shared — just set it directly without swapping
+      if (color === 'unknown') {
+        return prev.map((p, idx) => idx === i ? { ...p, color } : p)
+      }
       const conflictIdx = prev.findIndex((p, idx) => idx !== i && p.color === color)
       if (conflictIdx === -1) {
         // Color is free — just set it
