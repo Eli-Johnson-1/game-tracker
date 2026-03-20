@@ -25,11 +25,14 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
   const [step, setStep] = useState(1)         // 1 = pick mode, 2 = configure players
   const [mode, setMode] = useState(null)
   const [venusNext, setVenusNext] = useState(false)
+  const [playedDate, setPlayedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [historical, setHistorical] = useState(false)
   const [players, setPlayers] = useState([])
   const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const errorRef = useRef(null)
+  const today = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
     if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -40,6 +43,8 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
     setStep(1)
     setMode(null)
     setVenusNext(false)
+    setPlayedDate(new Date().toISOString().slice(0, 10))
+    setHistorical(false)
     setPlayers([])
     setError('')
     listUsers().then(({ data }) => setAllUsers(data.users)).catch(() => {})
@@ -142,6 +147,8 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
       const payload = {
         mode,
         venus_next: venusNext,
+        played_at: historical ? null : playedDate,
+        imported: historical,
         players: players.map(p => ({
           user_id: p.user_id || null,
           player_name: p.player_name.trim(),
@@ -193,6 +200,26 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
                 className="accent-orange-500 w-4 h-4"
               />
               <span className="text-sm text-gray-300">Venus Next</span>
+            </label>
+          </div>
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Date played:</p>
+            <input
+              type="date"
+              value={playedDate}
+              onChange={e => setPlayedDate(e.target.value)}
+              disabled={historical}
+              max={today}
+              className="rounded px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+            />
+            <label className="flex items-center gap-2 mt-2 text-sm text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={historical}
+                onChange={e => setHistorical(e.target.checked)}
+                className="accent-orange-500 w-4 h-4"
+              />
+              Date unknown (mark as historical)
             </label>
           </div>
           <div className="flex gap-2 pt-2">
