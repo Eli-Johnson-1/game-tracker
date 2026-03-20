@@ -41,6 +41,7 @@ function runMigrations() {
     require('./migrations/008_tm_imported'),
     require('./migrations/009_venus_scale'),
     require('./migrations/010_unknown_color'),
+    require('./migrations/011_mega_credits'),
   ]
 
   for (const migration of migrations) {

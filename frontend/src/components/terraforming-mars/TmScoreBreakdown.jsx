@@ -24,6 +24,7 @@ export function TmScoreBreakdown({ game }) {
   const sorted = [...game.players].sort((a, b) => (a.final_rank ?? 99) - (b.final_rank ?? 99))
   const isSolo = game.mode === 'solo'
   const winner = sorted[0]
+  const showMegaCredits = !isSolo && sorted.some(p => (p.mega_credits ?? 0) > 0)
 
   return (
     <div className="space-y-4 mb-6">
@@ -72,6 +73,9 @@ export function TmScoreBreakdown({ game }) {
                   </>
                 )}
                 <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Total</th>
+                {showMegaCredits && (
+                  <th className="text-right px-2 py-2 font-medium whitespace-nowrap" title="Mega Credits tiebreaker">M€</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -106,6 +110,9 @@ export function TmScoreBreakdown({ game }) {
                     <td className={`px-3 py-2 text-right font-bold ${isWinner ? 'text-orange-300' : 'text-white'}`}>
                       {p.total_vps}
                     </td>
+                    {showMegaCredits && (
+                      <td className="px-2 py-2 text-right text-gray-300">{p.mega_credits ?? 0}</td>
+                    )}
                   </tr>
                 )
               })}

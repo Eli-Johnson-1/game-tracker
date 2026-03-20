@@ -243,10 +243,11 @@ function _processBody(game, dbPlayerMap, body) {
       milestone_vps: vps.milestoneVps,
       award_vps: vps.awardVps,
       total_vps: vps.total,
+      mega_credits: p.mega_credits ?? 0,
     }
   })
 
-  const ranked = rankPlayers(scoredPlayers.map(p => ({ id: p.player_id, total_vps: p.total_vps })))
+  const ranked = rankPlayers(scoredPlayers.map(p => ({ id: p.player_id, total_vps: p.total_vps, mega_credits: p.mega_credits })))
   const rankMap = Object.fromEntries(ranked.map(r => [r.id, r.final_rank]))
 
   return { scoredPlayers, rankMap, milestones, awards, generation, solo_terraformed, venus_scale }
@@ -262,12 +263,14 @@ function _writeScores(db, gameId, mode, { scoredPlayers, rankMap, milestones, aw
         tr = ?, greeneries = ?, city_adjacent_greeneries = ?,
         card_vps_expression = ?, card_vps = ?,
         milestone_vps = ?, award_vps = ?, total_vps = ?,
+        mega_credits = ?,
         final_rank = ?
       WHERE id = ?
     `).run(
       p.tr, p.greeneries, p.city_adjacent_greeneries,
       p.card_vps_expression, p.card_vps,
       p.milestone_vps, p.award_vps, p.total_vps,
+      p.mega_credits,
       rankMap[p.player_id],
       p.player_id
     )
