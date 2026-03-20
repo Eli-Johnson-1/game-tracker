@@ -1,9 +1,10 @@
 const COLOR_BG = {
-  red:    '#dc2626',
-  green:  '#16a34a',
-  blue:   '#2563eb',
-  yellow: '#ca8a04',
-  black:  '#374151',
+  red:     '#dc2626',
+  green:   '#16a34a',
+  blue:    '#2563eb',
+  yellow:  '#ca8a04',
+  black:   '#374151',
+  unknown: '#6b7280',
 }
 
 const RANK_LABELS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' }

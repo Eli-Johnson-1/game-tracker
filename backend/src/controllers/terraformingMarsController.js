@@ -51,9 +51,9 @@ function createGame(req, res, next) {
     const { mode, players, venus_next, played_at, imported } = req.body
     const createdBy = req.user.id
 
-    // Validate colors are unique
-    const colors = players.map(p => p.color)
-    if (new Set(colors).size !== colors.length) {
+    // Validate colors are unique (excluding 'unknown', which can be shared)
+    const knownColors = players.map(p => p.color).filter(c => c !== 'unknown')
+    if (new Set(knownColors).size !== knownColors.length) {
       return next(new ValidationError('Each player must have a unique color'))
     }
 

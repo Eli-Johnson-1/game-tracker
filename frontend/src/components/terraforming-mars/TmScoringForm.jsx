@@ -9,11 +9,12 @@ const BASE_MILESTONE_NAMES = ['Terraformer', 'Mayor', 'Gardener', 'Builder', 'Pl
 const BASE_AWARD_NAMES = ['Landlord', 'Banker', 'Scientist', 'Thermalist', 'Miner']
 
 const COLOR_BG = {
-  red:    '#dc2626',
-  green:  '#16a34a',
-  blue:   '#2563eb',
-  yellow: '#ca8a04',
-  black:  '#374151',
+  red:     '#dc2626',
+  green:   '#16a34a',
+  blue:    '#2563eb',
+  yellow:  '#ca8a04',
+  black:   '#374151',
+  unknown: '#6b7280',
 }
 
 function ColorChip({ color }) {
@@ -308,7 +309,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
       const payload = {
         generation: game.imported ? undefined : generation,
         solo_terraformed: game.mode === 'solo' ? soloTerraformed : undefined,
-        venus_scale: !isSolo && game.venus_next && !game.imported ? venusScale : undefined,
+        venus_scale: !isSolo && !!game.venus_next && !game.imported ? venusScale : undefined,
         players: game.players.map(p => {
           const d = playerData[p.id]
           return {
@@ -461,7 +462,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                 <SelectInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={25} />
               </div>
             )}
-            {!isSolo && game.venus_next && !game.imported && (
+            {!isSolo && !!game.venus_next && !game.imported && (
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Venus scale (%)</label>
                 <SelectInput value={venusScale} onChange={setVenusScale} min={0} max={30} step={2} />

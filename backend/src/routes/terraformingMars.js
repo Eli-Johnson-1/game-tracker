@@ -28,7 +28,7 @@ const upload = multer({
   },
 })
 
-const VALID_COLORS = ['red', 'green', 'blue', 'yellow', 'black']
+const VALID_COLORS = ['red', 'green', 'blue', 'yellow', 'black', 'unknown']
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
