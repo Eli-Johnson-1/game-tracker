@@ -5,8 +5,8 @@ import { analyzePhoto, completeGame, updateGame } from '../../api/terraformingMa
 // Feature flag — set to true to re-enable photo analysis
 const PHOTO_ANALYSIS_ENABLED = false
 
-const MILESTONE_NAMES = ['Terraformer', 'Mayor', 'Gardener', 'Builder', 'Planner']
-const AWARD_NAMES = ['Landlord', 'Banker', 'Scientist', 'Thermalist', 'Miner']
+const BASE_MILESTONE_NAMES = ['Terraformer', 'Mayor', 'Gardener', 'Builder', 'Planner']
+const BASE_AWARD_NAMES = ['Landlord', 'Banker', 'Scientist', 'Thermalist', 'Miner']
 
 const COLOR_BG = {
   red:    '#dc2626',
@@ -73,6 +73,13 @@ function buildAwardState(initialData) {
 }
 
 export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
+  const MILESTONE_NAMES = game.venus_next
+    ? [...BASE_MILESTONE_NAMES, 'Hoverlord']
+    : BASE_MILESTONE_NAMES
+  const AWARD_NAMES = game.venus_next
+    ? [...BASE_AWARD_NAMES, 'Venuphile']
+    : BASE_AWARD_NAMES
+
   const [tab, setTab] = useState('manual')
   const [generation, setGeneration] = useState(initialData?.generation ?? 1)
   const [soloTerraformed, setSoloTerraformed] = useState(initialData?.solo_terraformed === 1)

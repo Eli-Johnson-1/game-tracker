@@ -68,7 +68,7 @@ export function TmLeaderboard() {
           </thead>
           <tbody>
             {sorted.map((row, i) => (
-              <tr key={row.id} className={i % 2 === 0 ? 'bg-black/10' : ''}>
+              <tr key={row.row_key} className={i % 2 === 0 ? 'bg-black/10' : ''}>
                 <td className="px-4 py-2 text-gray-500">{i + 1}</td>
                 <td className="px-4 py-2 text-white font-medium">{row.username}</td>
                 <td className="px-3 py-2 text-right text-white">{row.games_played}</td>

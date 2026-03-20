@@ -28,6 +28,23 @@ This project uses **GitHub Flow**: feature branches → PR → merge to `main`.
 - Run `npm run test` in `backend/` — all tests must pass
 - Run `npm run lint` in `frontend/` — no lint errors
 
+### Planning
+- Always plan before writing code. Present the plan and get confirmation before proceeding.
+- Break work into clear, trackable steps.
+- Use TaskCreate/TaskUpdate to track progress and mark items complete as they are finished.
+
+### Development
+- After implementing changes, run tests, check logs, and demonstrate that things are working.
+- Explain what was changed and provide high-level summaries of the work done.
+- Follow best practices and industry standards — no shortcuts or temporary fixes.
+- When bugs or issues arise, find the root cause and fix it properly.
+
+### When Things Go Wrong
+- If something is not working or the approach is getting messy, stop immediately.
+- Re-plan before continuing — do not push through with workarounds.
+- Communicate clearly about what went wrong and what the revised plan is.
+
+
 ## Commands
 
 ### Backend (`backend/`)
@@ -125,12 +142,12 @@ Hand submission (`ginRummyController.submitHand`) runs the entire scoring pipeli
 
 **Terraforming Mars UI components** (`components/terraforming-mars/`):
 - `TerraformingMarsLayout` — Mars-themed header (`#2d1000` bg, `#7c2d12` border, `#f97316` accent)
-- `NewTmGameModal` — two-step: pick mode (solo/multiplayer) → configure players; color swatch picker; registered user dropdown or guest name input; creator row locked to logged-in user
-- `TmScoringForm` — main score entry form; accepts optional `initialData`/`isEditing` props for edit mode; milestone picker is radio buttons + ColorChip (not a select); city-adjacent tooltip uses Tailwind `group`/`group-hover` (not `title`); photo tab has drag-and-drop + × remove button; calls `updateGame` when `isEditing`, `completeGame` otherwise
+- `NewTmGameModal` — two-step: pick mode (solo/multiplayer) + Venus Next checkbox → configure players; color swatch picker; registered user dropdown or guest name input; creator row locked to logged-in user; scroll-to-error on failed submission (`useRef` + `scrollIntoView`)
+- `TmScoringForm` — main score entry form; accepts optional `initialData`/`isEditing` props for edit mode; milestone/award name lists derived from `game.venus_next` flag (includes Hoverlord/Venuphile when true); milestone picker is radio buttons + ColorChip (not a select); city-adjacent tooltip uses Tailwind `group`/`group-hover` (not `title`); photo tab has drag-and-drop + × remove button; calls `updateGame` when `isEditing`, `completeGame` otherwise
 - `CardVpInput` — `type="text"` input; regex ALLOWED guard `/^[\d\s+\-*/().]*$/`; mathjs live preview shows evaluated integer or "invalid"
 - `TmScoreBreakdown` — score table + winner/solo banner; milestone and award places each on own line with ColorChip; Cards cell shows only integer (no expression)
 - `TmGamesList` — list of TM games with status/date/players
-- `TmLeaderboard` — TM-specific leaderboard
+- `TmLeaderboard` — TM-specific leaderboard; uses `row_key` as React key (supports guest rows from UNION ALL query)
 
 ### Database Schema
 
@@ -144,7 +161,7 @@ Key Gin Rummy relationships:
 `gin_rummy_games.imported = 1` marks historically imported games (no real date; `hand_type = 'imported'` on all their hands). The `started_at` field is set to the import time and should be ignored in the UI when `imported = 1`.
 
 **Terraforming Mars:** 5 tables added in migration 005.
-- `tm_games` — id, created_by (→ users.id), mode (solo/multiplayer), status (active/complete), generation, solo_terraformed, created_at
+- `tm_games` — id, created_by (→ users.id), mode (solo/multiplayer), status (active/complete), generation, solo_terraformed, venus_next (0/1), created_at
 - `tm_game_players` — id, game_id (CASCADE), user_id (nullable for guests), player_name, color, tr, greeneries, city_adjacent_greeneries, card_vps, card_vps_expression, milestone_vps, award_vps, total_vps, final_rank
 - `tm_game_milestones` — id, game_id (CASCADE), milestone_name, player_id (→ tm_game_players)
 - `tm_game_awards` — id, game_id (CASCADE), award_name
@@ -161,8 +178,10 @@ Guest players have `user_id IS NULL` in `tm_game_players`. The site leaderboard 
 | `003_bonus_toggles.js` | Adds `game_bonus_enabled` and `line_bonus_enabled` settings (both default `true`) |
 | `004_entra_auth.js` | Adds `entra_oid TEXT UNIQUE` to users; updates Kylie/Eli emails to @chuplab.com |
 | `005_terraforming_mars.js` | Adds 5 TM tables (tm_games, tm_game_players, tm_game_milestones, tm_game_awards, tm_game_award_places) |
+| `006_nullable_password_hash.js` | Makes `password_hash` nullable in `users` (supports Entra-only accounts) |
+| `007_venus_next.js` | Adds `venus_next INTEGER NOT NULL DEFAULT 0` to `tm_games` |
 
-**Next new migration: `007_<feature>.js`**
+**Next new migration: `008_<feature>.js`**
 
 ### Adding a new game type
 
@@ -208,6 +227,10 @@ Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
 
 Scoring categories: TR + greeneries (1 VP each) + city-adjacent greeneries (1 VP each) + card VPs (expression evaluated via mathjs) + milestone VPs (5 each, max 3 milestones) + award VPs (5 for 1st, 2 for 2nd).
 
+Base milestones: Terraformer, Mayor, Gardener, Builder, Planner. Venus Next adds: Hoverlord.
+Base awards: Landlord, Banker, Scientist, Thermalist, Miner. Venus Next adds: Venuphile.
+Validation of milestone/award names is gated on `game.venus_next` in the controller — scoring math is name-agnostic.
+
 Competition ranking: ties share same rank, next rank skips (e.g., two tied 1st → both rank 1, next is rank 3).
 
 Photo analysis: multer memory storage → base64 → Claude Vision (claude-sonnet-4-6) → structured JSON. Returns 503 if `ANTHROPIC_API_KEY` not set. Requires `ANTHROPIC_API_KEY` in backend/.env and docker-compose.yml.
@@ -235,6 +258,7 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 | 12 | ✅ Complete | Mobile UI polish, admin control, page titles (merged PR #14) |
 | 13 | ✅ Complete | TM UX follow-ups: TR scroll picker, remove card VP +/− buttons (merged PR #16) |
 | 14 | ✅ Complete | TM form fixes: CardVpInput +/− buttons restored w/ focus fix, generation default 1, solo TR default 14 (merged PR #17) |
+| 15 | ✅ Complete | Venus Next expansion support + TM UX fixes (merged PR #18) |
 
 ### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
@@ -285,3 +309,12 @@ Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via C
 - **CardVpInput +/− buttons restored** — re-added `+` and `−` append buttons with focus fix: `onMouseDown={e => e.preventDefault()}` prevents blur on desktop; `inputRef.current?.focus()` after append re-opens keyboard on mobile; `inputMode` reverted to `numeric`
 - **Generation default** — new games default to generation 1 (was 14)
 - **TR default by mode** — `buildPlayerState` takes `mode` arg; solo games default TR to 14, multiplayer to 20 (was always 20)
+
+### Phase 15 — Venus Next Expansion + TM UX Fixes (complete, merged PR #18)
+
+- **Venus Next expansion** — `venus_next` boolean stored on `tm_games` (migration 007); controller validates Hoverlord milestone and Venuphile award only when `venus_next = 1`; `TmScoringForm` derives milestone/award name lists from `game.venus_next`; `NewTmGameModal` step 1 has Venus Next checkbox
+- **List all games** — `listGames` now returns all TM games instead of only games the logged-in user participated in
+- **Guest leaderboard** — TM leaderboard query uses `UNION ALL` to include guest players (grouped by `player_name`, `row_key` prefixed `g:` vs `u:`); `TmLeaderboard` uses `row_key` as React key
+- **Scrollable modal** — `Modal.jsx` gains `max-h-[90vh] flex flex-col` with `overflow-y-auto flex-1` on the body, enabling scroll for tall modals (NewTmGameModal with many players)
+- **Scroll to error** — `NewTmGameModal` scrolls to the `ErrorMessage` on failed submission via `useRef` + `scrollIntoView({ behavior: 'smooth', block: 'nearest' })`; fixes the UX where the user is scrolled to "Start game" and never sees the error
+- **56 tests** (up from 52) — 4 new Venus Next tests

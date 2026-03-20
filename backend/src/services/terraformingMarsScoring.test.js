@@ -250,3 +250,33 @@ describe('rankPlayers', () => {
     assert.equal(players[1].id, 2)
   })
 })
+
+// ─── Venus Next expansion ─────────────────────────────────────────────────────
+
+describe('Venus Next expansion', () => {
+  test('Hoverlord milestone scores 5 VP (same as any milestone)', () => {
+    const player = { tr: 20, greeneries: 0, city_adjacent_greeneries: 0, card_vps: 0 }
+    const result = calculatePlayerVps(player, 5, 0)
+    assert.equal(result.milestoneVps, 5)
+    assert.equal(result.total, 25)
+  })
+
+  test('Venuphile award 1st place scores 5 VP', () => {
+    const places = [{ award_id: 10, player_id: 1, place: 1 }]
+    assert.equal(calculateAwardVps(1, places), 5)
+  })
+
+  test('Venuphile award 2nd place scores 2 VP', () => {
+    const places = [{ award_id: 10, player_id: 1, place: 2 }]
+    assert.equal(calculateAwardVps(1, places), 2)
+  })
+
+  test('standard scoring unaffected when venus_next is off (no extra names needed)', () => {
+    // calculatePlayerVps and award VP math are name-agnostic — names are validated at
+    // controller level, not in the scoring service. This confirms a standard 5-milestone
+    // game scores identically regardless of which expansion flag is set.
+    const player = { tr: 25, greeneries: 4, city_adjacent_greeneries: 3, card_vps: 12 }
+    const result = calculatePlayerVps(player, 10, 5)
+    assert.equal(result.total, 59) // 25+4+3+10+5+12 — same as base game test
+  })
+})
