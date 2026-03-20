@@ -239,6 +239,30 @@ describe('rankPlayers', () => {
     assert.equal(ranked[0].final_rank, 1)
   })
 
+  test('VP tie broken by M€ — higher M€ wins (different ranks)', () => {
+    const players = [
+      { id: 1, total_vps: 50, mega_credits: 30 },
+      { id: 2, total_vps: 50, mega_credits: 20 },
+    ]
+    const ranked = rankPlayers(players)
+    const p1 = ranked.find(p => p.id === 1)
+    const p2 = ranked.find(p => p.id === 2)
+    assert.equal(p1.final_rank, 1)
+    assert.equal(p2.final_rank, 2)
+  })
+
+  test('VP tie with same M€ — still share same rank', () => {
+    const players = [
+      { id: 1, total_vps: 50, mega_credits: 25 },
+      { id: 2, total_vps: 50, mega_credits: 25 },
+    ]
+    const ranked = rankPlayers(players)
+    const p1 = ranked.find(p => p.id === 1)
+    const p2 = ranked.find(p => p.id === 2)
+    assert.equal(p1.final_rank, 1)
+    assert.equal(p2.final_rank, 1)
+  })
+
   test('does not mutate input array', () => {
     const players = [
       { id: 1, total_vps: 30 },

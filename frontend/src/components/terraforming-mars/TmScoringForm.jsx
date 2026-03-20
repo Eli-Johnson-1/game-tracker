@@ -50,6 +50,7 @@ function buildPlayerState(players, initialData, mode) {
       city_adjacent_greeneries: saved?.city_adjacent_greeneries ?? 0,
       card_vps_expression: saved?.card_vps_expression ?? '',
       card_vps_value: saved?.card_vps ?? 0,
+      mega_credits: saved?.mega_credits ?? 0,
       fromPhoto: {},
     }]
   }))
@@ -318,6 +319,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
             greeneries: d.greeneries,
             city_adjacent_greeneries: d.city_adjacent_greeneries,
             card_vps_expression: d.card_vps_expression || '',
+            mega_credits: d.mega_credits ?? 0,
           }
         }),
         milestones: game.imported
@@ -352,6 +354,30 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   }
 
   const isSolo = game.mode === 'solo'
+
+  function liveVp(playerId) {
+    const d = playerData[playerId]
+    const cardVp = d.card_vps_value || 0
+    let milestoneVp = 0, awardVp = 0
+    if (game.imported) {
+      milestoneVp = historicalMilestones.filter(m => m.player_id === playerId).length * 5
+      for (const a of historicalAwards) {
+        if (a.firstPlace.includes(playerId)) awardVp += 5
+        if (a.secondPlace.includes(playerId)) awardVp += 2
+      }
+    } else {
+      milestoneVp = Object.values(milestones).filter(id => id === playerId).length * 5
+      for (const { firstPlace, secondPlace } of Object.values(awards)) {
+        if (firstPlace.includes(playerId)) awardVp += 5
+        if (secondPlace.includes(playerId)) awardVp += 2
+      }
+    }
+    return d.tr + d.greeneries + d.city_adjacent_greeneries + cardVp + milestoneVp + awardVp
+  }
+
+  const vpTotals = game.players.map(p => ({ id: p.id, vp: liveVp(p.id) }))
+  const maxVp = Math.max(...vpTotals.map(x => x.vp))
+  const showTiebreaker = !isSolo && vpTotals.filter(x => x.vp === maxVp).length > 1
 
   return (
     <div>
@@ -795,6 +821,31 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                   + Add award
                 </button>
               )}
+            </div>
+          )}
+
+          {/* M€ Tiebreaker — shown only when 2+ players are tied for highest VP */}
+          {showTiebreaker && (
+            <div className="rounded-xl border p-4" style={{ borderColor: '#ca8a04', backgroundColor: '#2d1a00' }}>
+              <h3 className="text-sm font-semibold text-yellow-300 mb-1">Tiebreaker: M€ (Mega Credits)</h3>
+              <p className="text-xs text-gray-400 mb-3">Two or more players are tied. Enter each player's current M€ to break the tie.</p>
+              <div className="space-y-2">
+                {game.players.map(p => (
+                  <div key={p.id} className="flex items-center gap-3">
+                    <ColorChip color={p.color} />
+                    <span className="text-sm text-white flex-1">{p.player_name}</span>
+                    <span className="text-xs text-gray-400">{liveVp(p.id)} VP</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={playerData[p.id].mega_credits}
+                      onChange={e => updatePlayer(p.id, { mega_credits: Math.max(0, Number(e.target.value) || 0) })}
+                      className="w-20 rounded px-2 py-1 text-sm bg-gray-700 border border-yellow-700 text-white focus:outline-none focus:ring-1 focus:ring-yellow-500 text-right"
+                    />
+                    <span className="text-xs text-gray-400">M€</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

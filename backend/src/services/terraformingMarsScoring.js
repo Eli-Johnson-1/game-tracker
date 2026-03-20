@@ -81,12 +81,18 @@ function calculatePlayerVps(player, milestoneVps, awardVps) {
  * @returns {Array<{ id: number, total_vps: number, final_rank: number }>}
  */
 function rankPlayers(scoredPlayers) {
-  const sorted = [...scoredPlayers].sort((a, b) => b.total_vps - a.total_vps)
+  const sorted = [...scoredPlayers].sort((a, b) =>
+    b.total_vps - a.total_vps || (b.mega_credits || 0) - (a.mega_credits || 0)
+  )
 
   let rank = 1
   for (let i = 0; i < sorted.length; i++) {
-    if (i > 0 && sorted[i].total_vps < sorted[i - 1].total_vps) {
-      rank = i + 1
+    if (i > 0) {
+      const prev = sorted[i - 1]
+      const cur = sorted[i]
+      const sameRank = cur.total_vps === prev.total_vps &&
+        (cur.mega_credits || 0) === (prev.mega_credits || 0)
+      if (!sameRank) rank = i + 1
     }
     sorted[i].final_rank = rank
   }
