@@ -25,9 +25,9 @@ function ColorChip({ color }) {
   )
 }
 
-function SelectInput({ value, onChange, min = 0, max }) {
+function SelectInput({ value, onChange, min = 0, max, step = 1 }) {
   const options = []
-  for (let i = min; i <= max; i++) options.push(i)
+  for (let i = min; i <= max; i += step) options.push(i)
   return (
     <select
       value={value}
@@ -95,6 +95,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
 
   const [tab, setTab] = useState('manual')
   const [generation, setGeneration] = useState(initialData?.generation ?? 1)
+  const [venusScale, setVenusScale] = useState(initialData?.venus_scale ?? 0)
   const [soloTerraformed, setSoloTerraformed] = useState(initialData?.solo_terraformed === 1)
   const [playerData, setPlayerData] = useState(() => buildPlayerState(game.players, initialData, game.mode))
   const [milestones, setMilestones] = useState(() => buildMilestoneState(initialData))
@@ -307,6 +308,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
       const payload = {
         generation,
         solo_terraformed: game.mode === 'solo' ? soloTerraformed : undefined,
+        venus_scale: !isSolo && game.venus_next && !game.imported ? venusScale : undefined,
         players: game.players.map(p => {
           const d = playerData[p.id]
           return {
@@ -457,6 +459,12 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
               </label>
               <SelectInput value={generation} onChange={v => { setGeneration(v); setFromPhotoGeneration(false) }} min={1} max={25} />
             </div>
+            {!isSolo && game.venus_next && !game.imported && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Venus scale (%)</label>
+                <SelectInput value={venusScale} onChange={setVenusScale} min={0} max={30} step={2} />
+              </div>
+            )}
             {isSolo && (
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Terraforming completed?</label>

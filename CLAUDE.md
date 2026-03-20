@@ -181,8 +181,9 @@ Guest players have `user_id IS NULL` in `tm_game_players`. The site leaderboard 
 | `006_nullable_password_hash.js` | Makes `password_hash` nullable in `users` (supports Entra-only accounts) |
 | `007_venus_next.js` | Adds `venus_next INTEGER NOT NULL DEFAULT 0` to `tm_games` |
 | `008_tm_imported.js` | Adds `imported INTEGER NOT NULL DEFAULT 0` to `tm_games` |
+| `009_venus_scale.js` | Adds `venus_scale INTEGER` (nullable) to `tm_games` |
 
-**Next new migration: `009_<feature>.js`**
+**Next new migration: `010_<feature>.js`**
 
 ### Adding a new game type
 
@@ -262,6 +263,7 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 | 14 | ✅ Complete | TM form fixes: CardVpInput +/− buttons restored w/ focus fix, generation default 1, solo TR default 14 (merged PR #17) |
 | 15 | ✅ Complete | Venus Next expansion support + TM UX fixes (merged PR #18) |
 | 16 | ✅ Complete | Historical TM games, Venus Next subtitle, is_admin fresh-login fix (merged PR #19) |
+| 17 | ✅ Complete | Venus scale field for multiplayer Venus Next games (merged PR #20) |
 
 ### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
@@ -321,6 +323,12 @@ Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via C
 - **Scrollable modal** — `Modal.jsx` gains `max-h-[90vh] flex flex-col` with `overflow-y-auto flex-1` on the body, enabling scroll for tall modals (NewTmGameModal with many players)
 - **Scroll to error** — `NewTmGameModal` scrolls to the `ErrorMessage` on failed submission via `useRef` + `scrollIntoView({ behavior: 'smooth', block: 'nearest' })`; fixes the UX where the user is scrolled to "Start game" and never sees the error
 - **56 tests** (up from 52) — 4 new Venus Next tests
+
+### Phase 17 — Venus Scale for Multiplayer Venus Next Games (complete, merged PR #20)
+
+- **Venus scale field** — migration 009 adds nullable `venus_scale INTEGER` to `tm_games`; shown only for multiplayer Venus Next non-historical games as a scroll picker (0–30 in steps of 2); backend validates valid even number in range; stored as null for solo and non-Venus-Next games
+- **Score breakdown** — winner banner appends `· Venus N%` when `venus_next` is set and `venus_scale` is not null
+- **`SelectInput` step prop** — accepts optional `step` parameter (default 1) to generate non-sequential option lists
 
 ### Phase 16 — Historical TM Games, Venus Next Subtitle, is_admin Fix (complete, merged PR #19)
 
