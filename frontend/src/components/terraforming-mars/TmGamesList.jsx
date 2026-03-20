@@ -30,10 +30,11 @@ export function TmGamesList({ games }) {
     <div className="space-y-2">
       {games.map(g => {
         const winner = g.players?.find(p => p.final_rank === 1)
-        const date = g.created_at
-          ? new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-          : ''
+        const date = g.imported
+          ? 'Historical'
+          : new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
         const modeLabel = g.mode === 'solo' ? 'Solo' : `${g.player_count ?? g.players?.length ?? '?'}p`
+        const subtitle = [modeLabel, g.venus_next ? 'Venus Next' : null, date].filter(Boolean).join(' · ')
 
         return (
           <Link
@@ -54,7 +55,7 @@ export function TmGamesList({ games }) {
                   {(g.players ?? []).map(p => p.player_name).join(', ')}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {modeLabel} · {date}
+                  {subtitle}
                 </div>
               </div>
             </div>

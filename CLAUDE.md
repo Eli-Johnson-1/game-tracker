@@ -142,11 +142,11 @@ Hand submission (`ginRummyController.submitHand`) runs the entire scoring pipeli
 
 **Terraforming Mars UI components** (`components/terraforming-mars/`):
 - `TerraformingMarsLayout` — Mars-themed header (`#2d1000` bg, `#7c2d12` border, `#f97316` accent)
-- `NewTmGameModal` — two-step: pick mode (solo/multiplayer) + Venus Next checkbox → configure players; color swatch picker; registered user dropdown or guest name input; creator row locked to logged-in user; scroll-to-error on failed submission (`useRef` + `scrollIntoView`)
-- `TmScoringForm` — main score entry form; accepts optional `initialData`/`isEditing` props for edit mode; milestone/award name lists derived from `game.venus_next` flag (includes Hoverlord/Venuphile when true); milestone picker is radio buttons + ColorChip (not a select); city-adjacent tooltip uses Tailwind `group`/`group-hover` (not `title`); photo tab has drag-and-drop + × remove button; calls `updateGame` when `isEditing`, `completeGame` otherwise
+- `NewTmGameModal` — two-step: pick mode (solo/multiplayer) + Venus Next checkbox + date picker (defaults today, `max=today`) + "Date unknown" checkbox → configure players; when "Date unknown" is checked, `imported=1` and no date is sent; color swatch picker; registered user dropdown or guest name input; creator row locked to logged-in user; scroll-to-error on failed submission (`useRef` + `scrollIntoView`)
+- `TmScoringForm` — main score entry form; accepts optional `initialData`/`isEditing` props for edit mode; milestone/award name lists derived from `game.venus_next` flag (includes Hoverlord/Venuphile when true); milestone picker is radio buttons + ColorChip (not a select); city-adjacent tooltip uses Tailwind `group`/`group-hover` (not `title`); photo tab has drag-and-drop + × remove button; calls `updateGame` when `isEditing`, `completeGame` otherwise; when `!!game.imported` (coerce SQLite integer to bool), milestone/award sections show add/remove UI with player pickers only (no name selection) — auto-assigns "Milestone N"/"Award N" on submit; backend skips name validation for imported games
 - `CardVpInput` — `type="text"` input; regex ALLOWED guard `/^[\d\s+\-*/().]*$/`; mathjs live preview shows evaluated integer or "invalid"
 - `TmScoreBreakdown` — score table + winner/solo banner; milestone and award places each on own line with ColorChip; Cards cell shows only integer (no expression)
-- `TmGamesList` — list of TM games with status/date/players
+- `TmGamesList` — list of TM games; shows "Historical" when `imported=1`; subtitle is dot-joined `[modeLabel, "Venus Next"?, date]`
 - `TmLeaderboard` — TM-specific leaderboard; uses `row_key` as React key (supports guest rows from UNION ALL query)
 
 ### Database Schema
@@ -161,7 +161,7 @@ Key Gin Rummy relationships:
 `gin_rummy_games.imported = 1` marks historically imported games (no real date; `hand_type = 'imported'` on all their hands). The `started_at` field is set to the import time and should be ignored in the UI when `imported = 1`.
 
 **Terraforming Mars:** 5 tables added in migration 005.
-- `tm_games` — id, created_by (→ users.id), mode (solo/multiplayer), status (active/complete), generation, solo_terraformed, venus_next (0/1), created_at
+- `tm_games` — id, created_by (→ users.id), mode (solo/multiplayer), status (active/complete), generation, solo_terraformed, venus_next (0/1), imported (0/1), created_at
 - `tm_game_players` — id, game_id (CASCADE), user_id (nullable for guests), player_name, color, tr, greeneries, city_adjacent_greeneries, card_vps, card_vps_expression, milestone_vps, award_vps, total_vps, final_rank
 - `tm_game_milestones` — id, game_id (CASCADE), milestone_name, player_id (→ tm_game_players)
 - `tm_game_awards` — id, game_id (CASCADE), award_name
@@ -180,8 +180,9 @@ Guest players have `user_id IS NULL` in `tm_game_players`. The site leaderboard 
 | `005_terraforming_mars.js` | Adds 5 TM tables (tm_games, tm_game_players, tm_game_milestones, tm_game_awards, tm_game_award_places) |
 | `006_nullable_password_hash.js` | Makes `password_hash` nullable in `users` (supports Entra-only accounts) |
 | `007_venus_next.js` | Adds `venus_next INTEGER NOT NULL DEFAULT 0` to `tm_games` |
+| `008_tm_imported.js` | Adds `imported INTEGER NOT NULL DEFAULT 0` to `tm_games` |
 
-**Next new migration: `008_<feature>.js`**
+**Next new migration: `009_<feature>.js`**
 
 ### Adding a new game type
 
@@ -222,6 +223,7 @@ Equal deadwood on a knock counts as an undercut (defender wins 10 pts).
 - Username comparisons use `LOWER()` in SQL — login and registration are case-insensitive
 - Usernames are stored as-typed (display case is preserved)
 - `me()` returns `is_admin: true` when `req.user.username` matches `ADMIN_USERNAME` env var (case-insensitive); stored in `AuthContext` as `user.is_admin`
+- `entraAuth()` also returns `is_admin` in the user object (same logic as `me()`); required so admin buttons appear immediately after a fresh Entra SSO login without a subsequent `/me` call
 
 ## Terraforming Mars Scoring Reference
 
@@ -259,6 +261,7 @@ Edit scores: `editGame` controller deletes existing milestones/awards then re-ru
 | 13 | ✅ Complete | TM UX follow-ups: TR scroll picker, remove card VP +/− buttons (merged PR #16) |
 | 14 | ✅ Complete | TM form fixes: CardVpInput +/− buttons restored w/ focus fix, generation default 1, solo TR default 14 (merged PR #17) |
 | 15 | ✅ Complete | Venus Next expansion support + TM UX fixes (merged PR #18) |
+| 16 | ✅ Complete | Historical TM games, Venus Next subtitle, is_admin fresh-login fix (merged PR #19) |
 
 ### Phase 9 — UI & Feature Polish (complete, merged PR #8)
 
@@ -318,3 +321,11 @@ Full Terraforming Mars scoring: multiplayer and solo modes, photo analysis via C
 - **Scrollable modal** — `Modal.jsx` gains `max-h-[90vh] flex flex-col` with `overflow-y-auto flex-1` on the body, enabling scroll for tall modals (NewTmGameModal with many players)
 - **Scroll to error** — `NewTmGameModal` scrolls to the `ErrorMessage` on failed submission via `useRef` + `scrollIntoView({ behavior: 'smooth', block: 'nearest' })`; fixes the UX where the user is scrolled to "Start game" and never sees the error
 - **56 tests** (up from 52) — 4 new Venus Next tests
+
+### Phase 16 — Historical TM Games, Venus Next Subtitle, is_admin Fix (complete, merged PR #19)
+
+- **Historical TM games** — migration 008 adds `imported INTEGER NOT NULL DEFAULT 0` to `tm_games`; `NewTmGameModal` step 1 gains a date picker (defaults today, `max=today`) and a "Date unknown" checkbox that sets `imported=1`; `createGame` controller accepts `played_at`/`imported` in the payload; `listGames` sorts `imported ASC, created_at DESC` so historical games appear at the bottom
+- **Historical display** — `TmGamesList` shows "Historical" instead of a date when `imported=1`; `TerraformingMarsGamePage` header also shows "Historical" for imported games
+- **Historical milestone/award entry** — when `!!game.imported`, `TmScoringForm` shows add/remove UI with player pickers only (no name fields); names auto-assigned "Milestone 1", "Milestone 2", etc. and "Award 1", "Award 2", etc. on submit; backend skips milestone/award name validation for imported games
+- **Venus Next in subtitles** — `TmGamesList` subtitle is dot-joined `[modeLabel, "Venus Next"?, date]`; `TerraformingMarsGamePage` subtitle follows same pattern
+- **Bug fix: `is_admin` on fresh Entra login** — `entraAuth()` now returns `is_admin` in the user object (same check as `me()`); fixes admin delete/edit buttons not appearing until a page reload after signing in via Entra SSO

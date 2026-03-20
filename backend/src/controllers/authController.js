@@ -72,7 +72,10 @@ async function entraAuth(req, res, next) {
     }
 
     const token = signToken({ id: user.id, username: user.username })
-    res.json({ token, user })
+    const isAdmin = process.env.ADMIN_USERNAME
+      ? user.username.toLowerCase() === process.env.ADMIN_USERNAME.toLowerCase()
+      : false
+    res.json({ token, user: { ...user, is_admin: isAdmin } })
   } catch (err) {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Invalid or expired Microsoft token' })

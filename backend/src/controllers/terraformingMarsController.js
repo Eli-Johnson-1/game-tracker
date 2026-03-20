@@ -22,7 +22,7 @@ function listGames(req, res, next) {
         (SELECT COUNT(*) FROM tm_game_players p WHERE p.game_id = g.id) AS player_count
       FROM tm_games g
       JOIN users u ON u.id = g.created_by
-      ORDER BY g.created_at DESC
+      ORDER BY g.imported ASC, g.created_at DESC
     `).all()
 
     // Attach players to each game
@@ -48,7 +48,7 @@ function listGames(req, res, next) {
 function createGame(req, res, next) {
   try {
     const db = getDb()
-    const { mode, players, venus_next } = req.body
+    const { mode, players, venus_next, played_at, imported } = req.body
     const createdBy = req.user.id
 
     // Validate colors are unique
@@ -65,6 +65,19 @@ function createGame(req, res, next) {
       return next(new ValidationError('Multiplayer mode requires at least 2 players'))
     }
 
+    // Validate played_at if provided
+    let resolvedDate = null
+    if (!imported && played_at) {
+      const d = new Date(played_at)
+      if (isNaN(d.getTime())) {
+        return next(new ValidationError('Invalid played_at date'))
+      }
+      if (d > new Date()) {
+        return next(new ValidationError('played_at cannot be in the future'))
+      }
+      resolvedDate = played_at
+    }
+
     // Validate user_ids exist when provided
     for (const p of players) {
       if (p.user_id) {
@@ -74,9 +87,13 @@ function createGame(req, res, next) {
     }
 
     const doCreate = db.transaction(() => {
-      const gameResult = db.prepare(`
-        INSERT INTO tm_games (mode, created_by, venus_next) VALUES (?, ?, ?)
-      `).run(mode, createdBy, venus_next ? 1 : 0)
+      const gameResult = resolvedDate
+        ? db.prepare(`
+            INSERT INTO tm_games (mode, created_by, venus_next, imported, created_at) VALUES (?, ?, ?, ?, ?)
+          `).run(mode, createdBy, venus_next ? 1 : 0, 0, resolvedDate)
+        : db.prepare(`
+            INSERT INTO tm_games (mode, created_by, venus_next, imported) VALUES (?, ?, ?, ?)
+          `).run(mode, createdBy, venus_next ? 1 : 0, imported ? 1 : 0)
 
       const gameId = gameResult.lastInsertRowid
 
@@ -150,14 +167,14 @@ function _processBody(game, dbPlayerMap, body) {
   if (game.mode === 'solo' && milestones.length > 0) throw new ValidationError('Solo mode does not have milestones')
   if (milestones.length > 3) throw new ValidationError('Maximum 3 milestones can be claimed')
   for (const m of milestones) {
-    if (!validMilestones.includes(m.milestone_name)) throw new ValidationError(`Invalid milestone: ${m.milestone_name}`)
+    if (!game.imported && !validMilestones.includes(m.milestone_name)) throw new ValidationError(`Invalid milestone: ${m.milestone_name}`)
     if (!dbPlayerMap[m.player_id]) throw new ValidationError(`Milestone player ${m.player_id} not in this game`)
   }
 
   if (game.mode === 'solo' && awards.length > 0) throw new ValidationError('Solo mode does not have awards')
   if (awards.length > 3) throw new ValidationError('Maximum 3 awards can be funded')
   for (const a of awards) {
-    if (!validAwards.includes(a.award_name)) throw new ValidationError(`Invalid award: ${a.award_name}`)
+    if (!game.imported && !validAwards.includes(a.award_name)) throw new ValidationError(`Invalid award: ${a.award_name}`)
     for (const ap of a.places || []) {
       if (!dbPlayerMap[ap.player_id]) throw new ValidationError(`Award place player ${ap.player_id} not in this game`)
     }

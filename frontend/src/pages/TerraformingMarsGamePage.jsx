@@ -60,9 +60,9 @@ export function TerraformingMarsGamePage() {
   const isCreator = user.id === game.created_by
   const canDelete = isCreator || user.is_admin
   const canEdit = (isCreator || user.is_admin) && game.status === 'complete'
-  const date = game.created_at
-    ? new Date(game.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : ''
+  const date = game.imported
+    ? 'Historical'
+    : new Date(game.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
     <TerraformingMarsLayout>
@@ -82,7 +82,7 @@ export function TerraformingMarsGamePage() {
             {playerNames}
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            {game.mode === 'solo' ? 'Solo' : 'Multiplayer'} · {date}
+            {[game.mode === 'solo' ? 'Solo' : 'Multiplayer', game.venus_next ? 'Venus Next' : null, date].filter(Boolean).join(' · ')}
           </p>
         </div>
         {canDelete && (

@@ -72,6 +72,19 @@ function buildAwardState(initialData) {
   return result
 }
 
+function buildHistoricalMilestoneState(initialData) {
+  if (!initialData?.milestones?.length) return []
+  return initialData.milestones.map(m => ({ player_id: m.claimed_by_player_id }))
+}
+
+function buildHistoricalAwardState(initialData) {
+  if (!initialData?.awards?.length) return []
+  return initialData.awards.map(a => ({
+    firstPlace: (a.places || []).filter(ap => ap.place === 1).map(ap => ap.player_id),
+    secondPlace: (a.places || []).filter(ap => ap.place === 2).map(ap => ap.player_id),
+  }))
+}
+
 export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   const MILESTONE_NAMES = game.venus_next
     ? [...BASE_MILESTONE_NAMES, 'Hoverlord']
@@ -86,6 +99,8 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
   const [playerData, setPlayerData] = useState(() => buildPlayerState(game.players, initialData, game.mode))
   const [milestones, setMilestones] = useState(() => buildMilestoneState(initialData))
   const [awards, setAwards] = useState(() => buildAwardState(initialData))
+  const [historicalMilestones, setHistoricalMilestones] = useState(() => game.imported ? buildHistoricalMilestoneState(initialData) : [])
+  const [historicalAwards, setHistoricalAwards] = useState(() => game.imported ? buildHistoricalAwardState(initialData) : [])
 
   // Photo state
   const [photoFile, setPhotoFile] = useState(null)
@@ -170,6 +185,38 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
         : [...list, playerId]
       return { ...prev, [awardName]: { ...current, [key]: next } }
     })
+  }
+
+  function addHistoricalMilestone() {
+    if (historicalMilestones.length >= 3) return
+    setHistoricalMilestones(prev => [...prev, { player_id: game.players[0].id }])
+  }
+
+  function removeHistoricalMilestone(i) {
+    setHistoricalMilestones(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function setHistoricalMilestonePlayer(i, playerId) {
+    setHistoricalMilestones(prev => prev.map((m, idx) => idx === i ? { ...m, player_id: playerId } : m))
+  }
+
+  function addHistoricalAward() {
+    if (historicalAwards.length >= 3) return
+    setHistoricalAwards(prev => [...prev, { firstPlace: [], secondPlace: [] }])
+  }
+
+  function removeHistoricalAward(i) {
+    setHistoricalAwards(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function toggleHistoricalAwardPlace(i, playerId, place) {
+    setHistoricalAwards(prev => prev.map((a, idx) => {
+      if (idx !== i) return a
+      const key = place === 1 ? 'firstPlace' : 'secondPlace'
+      const list = a[key]
+      const next = list.includes(playerId) ? list.filter(id => id !== playerId) : [...list, playerId]
+      return { ...a, [key]: next }
+    }))
   }
 
   async function handleAnalyzePhoto() {
@@ -270,17 +317,24 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
             card_vps_expression: d.card_vps_expression || '',
           }
         }),
-        milestones: Object.entries(milestones).map(([name, player_id]) => ({
-          milestone_name: name,
-          player_id,
-        })),
-        awards: Object.entries(awards).map(([name, { firstPlace, secondPlace }]) => ({
-          award_name: name,
-          places: [
-            ...firstPlace.map(id => ({ player_id: id, place: 1 })),
-            ...secondPlace.map(id => ({ player_id: id, place: 2 })),
-          ],
-        })),
+        milestones: game.imported
+          ? historicalMilestones.map((m, i) => ({ milestone_name: `Milestone ${i + 1}`, player_id: m.player_id }))
+          : Object.entries(milestones).map(([name, player_id]) => ({ milestone_name: name, player_id })),
+        awards: game.imported
+          ? historicalAwards.map((a, i) => ({
+              award_name: `Award ${i + 1}`,
+              places: [
+                ...a.firstPlace.map(id => ({ player_id: id, place: 1 })),
+                ...a.secondPlace.map(id => ({ player_id: id, place: 2 })),
+              ],
+            }))
+          : Object.entries(awards).map(([name, { firstPlace, secondPlace }]) => ({
+              award_name: name,
+              places: [
+                ...firstPlace.map(id => ({ player_id: id, place: 1 })),
+                ...secondPlace.map(id => ({ player_id: id, place: 2 })),
+              ],
+            })),
       }
 
       const { data } = isEditing
@@ -499,7 +553,7 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
           </div>
 
           {/* Milestones (multiplayer only) */}
-          {!isSolo && (
+          {!isSolo && !game.imported && (
             <div className="rounded-xl border p-4" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
               <h3 className="text-sm font-semibold text-white mb-3">
                 Milestones
@@ -548,8 +602,45 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
             </div>
           )}
 
+          {/* Historical milestones — player-only, no name required */}
+          {!isSolo && !!game.imported && (
+            <div className="rounded-xl border p-4" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
+              <h3 className="text-sm font-semibold text-white mb-3">Milestones</h3>
+              <div className="space-y-3">
+                {historicalMilestones.map((m, i) => (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-white">Milestone {i + 1}</span>
+                      <button onClick={() => removeHistoricalMilestone(i)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {game.players.map(p => (
+                        <label key={p.id} className="flex items-center gap-1 text-sm text-white cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`hist-milestone-${i}`}
+                            checked={m.player_id === p.id}
+                            onChange={() => setHistoricalMilestonePlayer(i, p.id)}
+                            className="accent-orange-500"
+                          />
+                          <ColorChip color={p.color} />
+                          {p.player_name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {historicalMilestones.length < 3 && (
+                <button onClick={addHistoricalMilestone} className="text-sm mt-3 transition-colors" style={{ color: '#f97316' }}>
+                  + Add milestone
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Awards (multiplayer only) */}
-          {!isSolo && (
+          {!isSolo && !game.imported && (
             <div className="rounded-xl border p-4" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
               <h3 className="text-sm font-semibold text-white mb-3">
                 Awards
@@ -625,6 +716,74 @@ export function TmScoringForm({ game, onCompleted, initialData, isEditing }) {
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Historical awards — player-only, no name required */}
+          {!isSolo && !!game.imported && (
+            <div className="rounded-xl border p-4" style={{ borderColor: '#7c2d12', backgroundColor: '#2d1000' }}>
+              <h3 className="text-sm font-semibold text-white mb-3">Awards</h3>
+              <div className="space-y-4">
+                {historicalAwards.map((a, i) => {
+                  const firstTied = a.firstPlace.length >= 2
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-white">Award {i + 1}</span>
+                        <button onClick={() => removeHistoricalAward(i)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">1st place (5 VP) — select all tied</p>
+                          <div className="flex flex-wrap gap-3">
+                            {game.players.map(p => (
+                              <label key={p.id} className="flex items-center gap-1 text-sm text-white cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={a.firstPlace.includes(p.id)}
+                                  onChange={() => toggleHistoricalAwardPlace(i, p.id, 1)}
+                                  className="accent-orange-500"
+                                />
+                                <ColorChip color={p.color} />
+                                {p.player_name}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        {!firstTied && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">2nd place (2 VP) — select all tied</p>
+                            <div className="flex flex-wrap gap-3">
+                              {game.players
+                                .filter(p => !a.firstPlace.includes(p.id))
+                                .map(p => (
+                                  <label key={p.id} className="flex items-center gap-1 text-sm text-white cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={a.secondPlace.includes(p.id)}
+                                      onChange={() => toggleHistoricalAwardPlace(i, p.id, 2)}
+                                      className="accent-orange-500"
+                                    />
+                                    <ColorChip color={p.color} />
+                                    {p.player_name}
+                                  </label>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                        {firstTied && (
+                          <p className="text-xs text-gray-500 italic">Tie for 1st — no 2nd place awarded</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {historicalAwards.length < 3 && (
+                <button onClick={addHistoricalAward} className="text-sm mt-3 transition-colors" style={{ color: '#f97316' }}>
+                  + Add award
+                </button>
+              )}
             </div>
           )}
 
