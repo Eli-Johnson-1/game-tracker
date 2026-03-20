@@ -37,6 +37,7 @@ function runMigrations() {
     require('./migrations/004_entra_auth'),
     require('./migrations/005_terraforming_mars'),
     require('./migrations/006_nullable_password_hash'),
+    require('./migrations/007_venus_next'),
   ]
 
   for (const migration of migrations) {

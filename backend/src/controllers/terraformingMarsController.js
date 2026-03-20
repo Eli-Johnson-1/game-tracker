@@ -4,15 +4,16 @@ const { analyzeBoardPhoto } = require('../services/terraformingMarsPhotoAnalysis
 const { NotFoundError, ForbiddenError, ValidationError } = require('../utils/errors')
 
 const VALID_COLORS = ['red', 'green', 'blue', 'yellow', 'black']
-const VALID_MILESTONES = ['Terraformer', 'Mayor', 'Gardener', 'Builder', 'Planner']
-const VALID_AWARDS = ['Landlord', 'Banker', 'Scientist', 'Thermalist', 'Miner']
+const BASE_MILESTONES = ['Terraformer', 'Mayor', 'Gardener', 'Builder', 'Planner']
+const BASE_AWARDS = ['Landlord', 'Banker', 'Scientist', 'Thermalist', 'Miner']
+const VENUS_MILESTONES = ['Hoverlord']
+const VENUS_AWARDS = ['Venuphile']
 
 // ─── Games ──────────────────────────────────────────────────────────────────
 
 function listGames(req, res, next) {
   try {
     const db = getDb()
-    const userId = req.user.id
 
     const games = db.prepare(`
       SELECT
@@ -21,12 +22,8 @@ function listGames(req, res, next) {
         (SELECT COUNT(*) FROM tm_game_players p WHERE p.game_id = g.id) AS player_count
       FROM tm_games g
       JOIN users u ON u.id = g.created_by
-      WHERE g.created_by = ?
-         OR g.id IN (
-           SELECT game_id FROM tm_game_players WHERE user_id = ?
-         )
       ORDER BY g.created_at DESC
-    `).all(userId, userId)
+    `).all()
 
     // Attach players to each game
     const gameIds = games.map(g => g.id)
@@ -51,7 +48,7 @@ function listGames(req, res, next) {
 function createGame(req, res, next) {
   try {
     const db = getDb()
-    const { mode, players } = req.body
+    const { mode, players, venus_next } = req.body
     const createdBy = req.user.id
 
     // Validate colors are unique
@@ -78,8 +75,8 @@ function createGame(req, res, next) {
 
     const doCreate = db.transaction(() => {
       const gameResult = db.prepare(`
-        INSERT INTO tm_games (mode, created_by) VALUES (?, ?)
-      `).run(mode, createdBy)
+        INSERT INTO tm_games (mode, created_by, venus_next) VALUES (?, ?, ?)
+      `).run(mode, createdBy, venus_next ? 1 : 0)
 
       const gameId = gameResult.lastInsertRowid
 
@@ -143,17 +140,24 @@ function _processBody(game, dbPlayerMap, body) {
     }
   }
 
+  const validMilestones = game.venus_next
+    ? [...BASE_MILESTONES, ...VENUS_MILESTONES]
+    : BASE_MILESTONES
+  const validAwards = game.venus_next
+    ? [...BASE_AWARDS, ...VENUS_AWARDS]
+    : BASE_AWARDS
+
   if (game.mode === 'solo' && milestones.length > 0) throw new ValidationError('Solo mode does not have milestones')
   if (milestones.length > 3) throw new ValidationError('Maximum 3 milestones can be claimed')
   for (const m of milestones) {
-    if (!VALID_MILESTONES.includes(m.milestone_name)) throw new ValidationError(`Invalid milestone: ${m.milestone_name}`)
+    if (!validMilestones.includes(m.milestone_name)) throw new ValidationError(`Invalid milestone: ${m.milestone_name}`)
     if (!dbPlayerMap[m.player_id]) throw new ValidationError(`Milestone player ${m.player_id} not in this game`)
   }
 
   if (game.mode === 'solo' && awards.length > 0) throw new ValidationError('Solo mode does not have awards')
   if (awards.length > 3) throw new ValidationError('Maximum 3 awards can be funded')
   for (const a of awards) {
-    if (!VALID_AWARDS.includes(a.award_name)) throw new ValidationError(`Invalid award: ${a.award_name}`)
+    if (!validAwards.includes(a.award_name)) throw new ValidationError(`Invalid award: ${a.award_name}`)
     for (const ap of a.places || []) {
       if (!dbPlayerMap[ap.player_id]) throw new ValidationError(`Award place player ${ap.player_id} not in this game`)
     }
@@ -335,19 +339,37 @@ function getLeaderboard(req, res, next) {
     const db = getDb()
 
     const rows = db.prepare(`
-      SELECT
-        u.id,
-        u.username,
-        COUNT(DISTINCT g.id) AS games_played,
-        SUM(CASE WHEN p.final_rank = 1 THEN 1 ELSE 0 END) AS wins,
-        ROUND(AVG(p.total_vps), 1) AS avg_vps,
-        MAX(p.total_vps) AS best_vps,
-        ROUND(AVG(p.tr), 1) AS avg_tr
-      FROM users u
-      JOIN tm_game_players p ON p.user_id = u.id
-      JOIN tm_games g ON g.id = p.game_id AND g.status = 'complete'
-      GROUP BY u.id, u.username
-      HAVING games_played > 0
+      SELECT * FROM (
+        -- Registered users
+        SELECT
+          'u:' || u.id AS row_key,
+          u.username,
+          COUNT(DISTINCT g.id) AS games_played,
+          SUM(CASE WHEN p.final_rank = 1 THEN 1 ELSE 0 END) AS wins,
+          ROUND(AVG(p.total_vps), 1) AS avg_vps,
+          MAX(p.total_vps) AS best_vps,
+          ROUND(AVG(p.tr), 1) AS avg_tr
+        FROM users u
+        JOIN tm_game_players p ON p.user_id = u.id
+        JOIN tm_games g ON g.id = p.game_id AND g.status = 'complete'
+        GROUP BY u.id, u.username
+
+        UNION ALL
+
+        -- Guest players, grouped by name
+        SELECT
+          'g:' || p.player_name AS row_key,
+          p.player_name AS username,
+          COUNT(DISTINCT g.id) AS games_played,
+          SUM(CASE WHEN p.final_rank = 1 THEN 1 ELSE 0 END) AS wins,
+          ROUND(AVG(p.total_vps), 1) AS avg_vps,
+          MAX(p.total_vps) AS best_vps,
+          ROUND(AVG(p.tr), 1) AS avg_tr
+        FROM tm_game_players p
+        JOIN tm_games g ON g.id = p.game_id AND g.status = 'complete'
+        WHERE p.user_id IS NULL
+        GROUP BY p.player_name
+      )
       ORDER BY wins DESC, avg_vps DESC
     `).all()
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
 import { ErrorMessage } from '../common/ErrorMessage'
@@ -24,15 +24,22 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
   const { user } = useAuth()
   const [step, setStep] = useState(1)         // 1 = pick mode, 2 = configure players
   const [mode, setMode] = useState(null)
+  const [venusNext, setVenusNext] = useState(false)
   const [players, setPlayers] = useState([])
   const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const errorRef = useRef(null)
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [error])
 
   useEffect(() => {
     if (!open) return
     setStep(1)
     setMode(null)
+    setVenusNext(false)
     setPlayers([])
     setError('')
     listUsers().then(({ data }) => setAllUsers(data.users)).catch(() => {})
@@ -42,9 +49,13 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
     return allUsers.find(u => !excludeIds.includes(u.id)) || null
   }
 
-  function pickMode(m) {
+  function selectMode(m) {
     setMode(m)
-    if (m === 'solo') {
+  }
+
+  function handleNext() {
+    if (!mode) return
+    if (mode === 'solo') {
       setPlayers([makePlayer(user.id, user.username, 'red')])
     } else {
       const availableUser = firstAvailableUser([user.id])
@@ -121,10 +132,16 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
         return
       }
     }
+    const names = players.map(p => p.player_name.trim().toLowerCase())
+    if (new Set(names).size !== names.length) {
+      setError('All players must have unique names')
+      return
+    }
     setLoading(true)
     try {
       const payload = {
         mode,
+        venus_next: venusNext,
         players: players.map(p => ({
           user_id: p.user_id || null,
           player_name: p.player_name.trim(),
@@ -148,31 +165,48 @@ export function NewTmGameModal({ open, onClose, onCreated }) {
           <p className="text-sm text-gray-300">Choose game mode:</p>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => pickMode('solo')}
+              onClick={() => selectMode('solo')}
               className="p-4 rounded-lg border-2 text-center transition-colors hover:border-orange-500"
-              style={{ borderColor: '#7c2d12', backgroundColor: '#1a0800' }}
+              style={{ borderColor: mode === 'solo' ? '#ea580c' : '#7c2d12', backgroundColor: '#1a0800' }}
             >
               <div className="text-2xl mb-1">🚀</div>
               <div className="text-white font-semibold">Solo</div>
               <div className="text-xs text-gray-400 mt-1">Just you vs. the board</div>
             </button>
             <button
-              onClick={() => pickMode('multiplayer')}
+              onClick={() => selectMode('multiplayer')}
               className="p-4 rounded-lg border-2 text-center transition-colors hover:border-orange-500"
-              style={{ borderColor: '#7c2d12', backgroundColor: '#1a0800' }}
+              style={{ borderColor: mode === 'multiplayer' ? '#ea580c' : '#7c2d12', backgroundColor: '#1a0800' }}
             >
               <div className="text-2xl mb-1">👥</div>
               <div className="text-white font-semibold">Multiplayer</div>
               <div className="text-xs text-gray-400 mt-1">2–5 players</div>
             </button>
           </div>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Choose expansions:</p>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={venusNext}
+                onChange={e => setVenusNext(e.target.checked)}
+                className="accent-orange-500 w-4 h-4"
+              />
+              <span className="text-sm text-gray-300">Venus Next</span>
+            </label>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button onClick={handleNext} disabled={!mode}>Next: Add Players</Button>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          </div>
         </div>
       )}
 
       {step === 2 && (
         <div className="space-y-4">
-          <ErrorMessage message={error} />
+          <div ref={errorRef}>
+            <ErrorMessage message={error} />
+          </div>
 
           <div className="space-y-3">
             {players.map((p, i) => {
