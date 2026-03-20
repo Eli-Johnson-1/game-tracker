@@ -49,6 +49,7 @@ export function TmScoreBreakdown({ game }) {
         >
           🏆 {winner.player_name} wins with {winner.total_vps} VP
           {game.generation && ` — Generation ${game.generation}`}
+          {game.venus_next && game.venus_scale != null && ` · Venus ${game.venus_scale}%`}
         </div>
       )}
 

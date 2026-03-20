@@ -39,6 +39,7 @@ function runMigrations() {
     require('./migrations/006_nullable_password_hash'),
     require('./migrations/007_venus_next'),
     require('./migrations/008_tm_imported'),
+    require('./migrations/009_venus_scale'),
   ]
 
   for (const migration of migrations) {

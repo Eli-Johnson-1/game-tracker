@@ -149,7 +149,17 @@ function deleteGame(req, res, next) {
  * Returns { scoredPlayers, rankMap, milestones, awards, generation, solo_terraformed }
  */
 function _processBody(game, dbPlayerMap, body) {
-  const { generation, solo_terraformed, players, milestones = [], awards = [] } = body
+  const { generation, solo_terraformed, venus_scale, players, milestones = [], awards = [] } = body
+
+  if (game.mode === 'multiplayer' && game.venus_next && !game.imported) {
+    if (venus_scale === undefined || venus_scale === null) {
+      throw new ValidationError('venus_scale is required for multiplayer Venus Next games')
+    }
+    const validScales = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+    if (!validScales.includes(Number(venus_scale))) {
+      throw new ValidationError('venus_scale must be 0–30 in increments of 2')
+    }
+  }
 
   for (const p of players) {
     if (!dbPlayerMap[p.player_id]) {
@@ -235,13 +245,13 @@ function _processBody(game, dbPlayerMap, body) {
   const ranked = rankPlayers(scoredPlayers.map(p => ({ id: p.player_id, total_vps: p.total_vps })))
   const rankMap = Object.fromEntries(ranked.map(r => [r.id, r.final_rank]))
 
-  return { scoredPlayers, rankMap, milestones, awards, generation, solo_terraformed }
+  return { scoredPlayers, rankMap, milestones, awards, generation, solo_terraformed, venus_scale }
 }
 
 /**
  * Write scored results to the DB inside the caller's transaction.
  */
-function _writeScores(db, gameId, mode, { scoredPlayers, rankMap, milestones, awards, generation, solo_terraformed }) {
+function _writeScores(db, gameId, mode, { scoredPlayers, rankMap, milestones, awards, generation, solo_terraformed, venus_scale }) {
   for (const p of scoredPlayers) {
     db.prepare(`
       UPDATE tm_game_players SET
@@ -282,9 +292,15 @@ function _writeScores(db, gameId, mode, { scoredPlayers, rankMap, milestones, aw
       status = 'complete',
       generation = ?,
       solo_terraformed = ?,
+      venus_scale = ?,
       completed_at = datetime('now')
     WHERE id = ?
-  `).run(generation, mode === 'solo' ? (solo_terraformed ? 1 : 0) : null, gameId)
+  `).run(
+    generation,
+    mode === 'solo' ? (solo_terraformed ? 1 : 0) : null,
+    mode === 'multiplayer' ? (venus_scale ?? null) : null,
+    gameId
+  )
 }
 
 // ─── Complete / Edit ──────────────────────────────────────────────────────────
