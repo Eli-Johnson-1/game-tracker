@@ -4,6 +4,11 @@ const cors = require('cors')
 const { runMigrations } = require('./db/database')
 const { errorHandler } = require('./middleware/errorHandler')
 
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set')
+  process.exit(1)
+}
+
 const app = express()
 const PORT = process.env.PORT || 3000
 

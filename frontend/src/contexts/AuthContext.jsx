@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('token', data.token)
           setUser(data.user)
         })
-        .catch(() => {})
+        .catch(err => console.warn('MSAL silent token acquisition failed:', err))
         .finally(() => setLoading(false))
       return
     }

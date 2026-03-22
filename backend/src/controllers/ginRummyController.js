@@ -163,7 +163,7 @@ function submitHand(req, res, next) {
     const result = calculateHandResult(
       hand_type,
       hand_type === 'knock' ? Number(knocker_deadwood) : null,
-      hand_type !== 'gin' && hand_type !== 'big_gin' ? Number(defender_deadwood) : Number(defender_deadwood),
+      Number(defender_deadwood),
       settings
     )
 
@@ -253,7 +253,10 @@ function undoLastHand(req, res, next) {
     const game = db.prepare('SELECT * FROM gin_rummy_games WHERE id = ?').get(gameId)
     if (!game) return next(new NotFoundError('Game not found'))
 
-    if (game.player1_id !== req.user.id && game.player2_id !== req.user.id) {
+    const isAdmin = process.env.ADMIN_USERNAME
+      ? req.user.username.toLowerCase() === process.env.ADMIN_USERNAME.toLowerCase()
+      : false
+    if (game.player1_id !== req.user.id && game.player2_id !== req.user.id && !isAdmin) {
       return next(new ForbiddenError('You are not a participant in this game'))
     }
 
