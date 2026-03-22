@@ -48,7 +48,7 @@ async function entraAuth(req, res, next) {
 
     const oid = claims.oid
     const email = (claims.preferred_username || claims.email || '').toLowerCase()
-    const name = claims.name || email.split('@')[0]
+    const name = (claims.name || email.split('@')[0]).trim().slice(0, 50)
 
     const db = getDb()
 
